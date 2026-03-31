@@ -78,6 +78,14 @@ CREATE TABLE IF NOT EXISTS {table} (
 );
 """
 
+_OAUTH_STATES_SQL = """
+CREATE TABLE IF NOT EXISTS oauth_states (
+    id         TEXT PRIMARY KEY,
+    data       TEXT NOT NULL,
+    created_at TEXT
+);
+"""
+
 _INDEX_SQL = "CREATE INDEX IF NOT EXISTS idx_{table}_user_id ON {table}(user_id);"
 
 
@@ -86,6 +94,7 @@ def _bootstrap_sync(conn: sqlite3.Connection):
         conn.execute(_CREATE_SQL.format(table=table))
         if table not in ("family_links", "reminder_subscribers"):
             conn.execute(_INDEX_SQL.format(table=table))
+    conn.execute(_OAUTH_STATES_SQL)
     conn.commit()
 
 
@@ -94,6 +103,7 @@ async def _bootstrap_async(conn: aiosqlite.Connection):
         await conn.execute(_CREATE_SQL.format(table=table))
         if table not in ("family_links", "reminder_subscribers"):
             await conn.execute(_INDEX_SQL.format(table=table))
+    await conn.execute(_OAUTH_STATES_SQL)
     await conn.commit()
 
 
@@ -812,3 +822,47 @@ class SQLiteService:
     async def add_vitals_batch(self, user_id: str, entries: list[dict]) -> None:
         for entry in entries:
             await self.add_vitals_entry(user_id, entry)
+
+    # ------------------------------------------------------------------
+    # OAuth state (temporary, for OAuth callback validation)
+    # ------------------------------------------------------------------
+
+    async def set_oauth_state(self, state: str, data: dict) -> None:
+        """Store OAuth state token with a 10-minute TTL."""
+        data["created_at"] = datetime.now(timezone.utc).isoformat()
+        async with _async_conn() as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO oauth_states (id, data, created_at) VALUES (?,?,?)",
+                (state, json.dumps(_serialise(data)), data["created_at"]),
+            )
+            await conn.commit()
+
+    async def get_oauth_state(self, state: str) -> dict | None:
+        """Retrieve and validate an OAuth state token (10-min TTL)."""
+        async with _async_conn() as conn:
+            async with conn.execute(
+                "SELECT data FROM oauth_states WHERE id=?", (state,)
+            ) as cur:
+                row = await cur.fetchone()
+        if not row:
+            return None
+        data = json.loads(row[0])
+        created = data.get("created_at", "")
+        if created:
+            try:
+                created_dt = datetime.fromisoformat(created)
+                if created_dt.tzinfo is None:
+                    created_dt = created_dt.replace(tzinfo=timezone.utc)
+                from datetime import timedelta
+                if datetime.now(timezone.utc) - created_dt > timedelta(minutes=10):
+                    await self.delete_oauth_state(state)
+                    return None
+            except Exception:
+                pass
+        return data
+
+    async def delete_oauth_state(self, state: str) -> None:
+        """Delete a used OAuth state token."""
+        async with _async_conn() as conn:
+            await conn.execute("DELETE FROM oauth_states WHERE id=?", (state,))
+            await conn.commit()
