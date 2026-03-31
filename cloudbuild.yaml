@@ -1,0 +1,86 @@
+# =============================================================================
+# Cloud Build — Heali Connect CI/CD Pipeline
+# =============================================================================
+# Trigger this from Cloud Build console or gcloud:
+#   gcloud builds submit --config cloudbuild.yaml --project YOUR_PROJECT_ID .
+#
+# Or connect this repo to a Cloud Build trigger for automatic deploys on push.
+# =============================================================================
+
+substitutions:
+  _PROJECT_ID: "medlive-488722"
+  _REGION: "us-central1"
+  _SERVICE_NAME: "medlive"
+  _IMAGE: "gcr.io/medlive-488722/medlive"
+
+steps:
+  # ---------------------------------------------------------------------------
+  # Step 1: Build the multi-stage Docker image
+  # (Node 20 → React SPA, then Python 3.11 → FastAPI + dist/)
+  # ---------------------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: "build"
+    args:
+      - build
+      - "--tag=${_IMAGE}:$BUILD_ID"
+      - "--tag=${_IMAGE}:latest"
+      - "--build-arg=VITE_FIREBASE_API_KEY=AIzaSyAami7n01CmBp1EvwMaCzNSXsjlt5XvAoE"
+      - "--build-arg=VITE_FIREBASE_AUTH_DOMAIN=medlive-488722.firebaseapp.com"
+      - "--build-arg=VITE_FIREBASE_PROJECT_ID=medlive-488722"
+      - "--build-arg=VITE_FIREBASE_STORAGE_BUCKET=medlive-488722.firebasestorage.app"
+      - "--build-arg=VITE_FIREBASE_MESSAGING_SENDER_ID=479757625763"
+      - "--build-arg=VITE_FIREBASE_APP_ID=1:479757625763:web:61c5299bf510e2b3c3d216"
+      - "--build-arg=VITE_BACKEND_HOST=medlive-zjp5lygwpa-uc.a.run.app"
+      - "--build-arg=CACHEBUST=$(date +%s)"
+      - "."
+    timeout: "1200s"   # 20 min for Node install + Python deps
+
+  # ---------------------------------------------------------------------------
+  # Step 2: Push image to Container Registry
+  # ---------------------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: "push"
+    waitFor: ["build"]
+    args:
+      - push
+      - "--all-tags"
+      - "${_IMAGE}"
+
+  # ---------------------------------------------------------------------------
+  # Step 3: Deploy to Cloud Run
+  #   --session-affinity  → sticky WebSocket routing (same instance per client)
+  #   --timeout 3600      → 1-hour timeout for long-lived voice sessions
+  #   --min-instances 1   → always warm, no cold-start WebSocket failures
+  # ---------------------------------------------------------------------------
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy"
+    waitFor: ["push"]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_SERVICE_NAME}"
+      - "--image=${_IMAGE}:$BUILD_ID"
+      - "--region=${_REGION}"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+      - "--session-affinity"
+      - "--min-instances=1"
+      - "--max-instances=10"
+      - "--concurrency=80"
+      - "--timeout=3600"
+      - "--memory=2Gi"
+      - "--cpu=2"
+      - "--set-env-vars=GOOGLE_CLOUD_PROJECT=${_PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,MEDLIVE_MODEL=gemini-live-2.5-flash-native-audio,USE_FIRESTORE=true,GOOGLE_APPLICATION_CREDENTIALS=/secrets/firebase-admin-sdk.json,MEDLIVE_APP_URL=https://medlive-zjp5lygwpa-uc.a.run.app,CORS_ALLOWED_ORIGINS=https://medlive-zjp5lygwpa-uc.a.run.app"
+      - "--set-secrets=GOOGLE_API_KEY=medlive-google-api-key:latest,/secrets/firebase-admin-sdk.json=medlive-firebase-admin:latest,REMINDERS_TRIGGER_SECRET=medlive-reminders-secret:latest,TWILIO_ACCOUNT_SID=medlive-twilio-sid:latest,TWILIO_AUTH_TOKEN=medlive-twilio-token:latest,TWILIO_FROM_NUMBER=medlive-twilio-from:latest"
+      - "--project=${_PROJECT_ID}"
+
+images:
+  - "gcr.io/medlive-488722/medlive:$BUILD_ID"
+  - "gcr.io/medlive-488722/medlive:latest"
+
+timeout: "2400s"   # 40 min total pipeline timeout
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: "E2_HIGHCPU_8"   # Faster Node/npm build

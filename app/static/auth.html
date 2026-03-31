@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>MedLive — Sign In</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <style>
+    body {
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .auth-card {
+      background: var(--card);
+      border: 3px solid var(--border);
+      border-radius: var(--wobbly);
+      padding: 40px 32px 36px;
+      max-width: 420px;
+      width: 92%;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+      position: relative;
+      transform: rotate(-0.5deg);
+    }
+
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-2deg);
+      width: 70px;
+      height: 22px;
+      background: rgba(200, 200, 180, 0.5);
+      border-radius: 2px;
+    }
+
+    .auth-logo {
+      font-family: var(--font-heading);
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--fg);
+      transform: rotate(0.5deg);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .auth-subtitle {
+      color: var(--fg);
+      opacity: 0.65;
+      font-size: 1.05rem;
+      margin-bottom: 32px;
+    }
+
+    /* Google Sign-In button */
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      padding: 16px 20px;
+      background: var(--card);
+      border: 3px solid var(--fg);
+      border-radius: var(--wobbly-btn);
+      font-family: var(--font-body);
+      font-size: 1.15rem;
+      color: var(--fg);
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.1s;
+      margin-bottom: 20px;
+    }
+
+    .btn-google:hover {
+      background: #4285F4;
+      color: white;
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .btn-google svg {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      color: var(--fg);
+      opacity: 0.4;
+      font-size: 0.9rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      border-top: 2px dashed var(--muted);
+    }
+
+    /* Email form */
+    .email-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .email-form input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--wobbly-sm);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      background: var(--bg);
+      color: var(--fg);
+      transition: border-color 0.15s;
+    }
+
+    .email-form input:focus {
+      outline: none;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(45, 93, 161, 0.12);
+    }
+
+    .btn-email {
+      width: 100%;
+      padding: 14px;
+      background: var(--card);
+      border: 3px solid var(--fg);
+      border-radius: var(--wobbly-btn);
+      font-family: var(--font-body);
+      font-size: 1.1rem;
+      color: var(--fg);
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.1s;
+    }
+
+    .btn-email:hover {
+      background: var(--fg);
+      color: var(--card);
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .btn-email:active {
+      transform: translate(4px, 4px);
+      box-shadow: none;
+    }
+
+    /* Toggle between sign-in / sign-up */
+    .auth-toggle {
+      margin-top: 16px;
+      font-size: 0.95rem;
+      color: var(--fg);
+      opacity: 0.7;
+    }
+
+    .auth-toggle a {
+      color: var(--secondary);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* Error/status message */
+    .auth-message {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: var(--wobbly-sm);
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .auth-message.error {
+      background: #fff0f0;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      display: block;
+    }
+
+    .auth-message.info {
+      background: var(--postit);
+      border: 2px solid var(--border);
+      color: var(--fg);
+      display: block;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0, 0, 0, 0.15);
+      border-top-color: var(--fg);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Welcome-back banner (shown for 2s after returning-user sign-in) */
+    .welcome-back-banner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 40px 32px;
+      text-align: center;
+      animation: fadeInUp 0.4s ease;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .welcome-back-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid var(--fg);
+      object-fit: cover;
+      box-shadow: 4px 4px 0 0 var(--fg);
+    }
+
+    .welcome-back-name {
+      font-family: var(--font-heading);
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--fg);
+    }
+
+    .welcome-back-sub {
+      color: var(--fg);
+      opacity: 0.6;
+      font-size: 1rem;
+    }
+
+    .welcome-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .welcome-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--secondary);
+      animation: welcomeDot 1.2s infinite ease-in-out;
+    }
+
+    .welcome-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .welcome-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes welcomeDot {
+
+      0%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+
+      50% {
+        transform: translateY(-6px);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="auth-card">
+    <span class="auth-logo">✏️ MedLive</span>
+    <p class="auth-subtitle">Your AI Health Guardian — sign in to continue</p>
+
+    <!-- Google Sign-In (primary) -->
+    <button class="btn-google" id="google-btn" onclick="signInWithGoogle()">
+      <!-- Google G icon -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+          fill="#4285F4" />
+        <path
+          d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+          fill="#34A853" />
+        <path
+          d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+          fill="#FBBC05" />
+        <path
+          d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+          fill="#EA4335" />
+      </svg>
+      Continue with Google
+    </button>
+
+    <div class="divider">or</div>
+
+    <!-- Email / Password form -->
+    <form class="email-form" id="email-form" onsubmit="handleEmailForm(event)">
+      <input type="email" id="email-input" placeholder="Email address" required autocomplete="email">
+      <input type="password" id="password-input" placeholder="Password (6+ characters)" required minlength="6"
+        autocomplete="current-password">
+      <button type="submit" class="btn-email" id="email-btn">Sign In with Email</button>
+    </form>
+
+    <p class="auth-toggle">
+      <span id="toggle-text">Don't have an account? </span>
+      <a id="toggle-link" onclick="toggleMode()">Create one</a>
+    </p>
+
+    <div class="auth-message" id="auth-message"></div>
+  </div>
+
+  <!-- Welcome Back Banner (shown 2s after returning-user sign-in) -->
+  <div class="welcome-back-banner" id="welcome-back-banner" style="display:none;">
+    <img class="welcome-back-avatar" id="welcome-back-avatar" src="" onerror="this.style.display='none'" alt="Avatar"
+      style="display:none;" />
+    <p class="welcome-back-name" id="welcome-back-name">Welcome back! 👋</p>
+    <p class="welcome-back-sub">Ready to speak with your companion?</p>
+
+    <div style="display: flex; gap: 12px; margin-top: 16px; width: 100%; justify-content: center;">
+      <button class="btn-email" style="padding: 10px 20px; font-size: 1rem; width: auto;"
+        onclick="window.location.href='/'">Continue</button>
+      <button class="btn-google" style="padding: 10px 20px; font-size: 1rem; width: auto; margin-bottom: 0;"
+        onclick="window.location.href='/static/onboarding.html'">Edit Profile</button>
+    </div>
+  </div>
+
+  <!-- Firebase JS SDK (compat CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <script>
+    // Firebase config (web app)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAE7FlwaMT_WIJk5a1np2xFQp_a8huGSro",
+      authDomain: "medlive-488722.firebaseapp.com",
+      projectId: "medlive-488722",
+      storageBucket: "medlive-488722.firebasestorage.app",
+      messagingSenderId: "479757625763",
+      appId: "1:479757625763:web:61c5299bf510e2b3c3d216"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    let isSignUpMode = false;
+
+    function showMessage(text, type = 'error') {
+      const el = document.getElementById('auth-message');
+      el.textContent = text;
+      el.className = `auth-message ${type}`;
+    }
+
+    function setLoading(loading) {
+      document.getElementById('google-btn').disabled = loading;
+      document.getElementById('email-btn').disabled = loading;
+      if (loading) {
+        showMessage('Processing...', 'info');
+        document.getElementById('email-btn').innerHTML = '<span class="spinner"></span>Please wait...';
+      } else {
+        document.getElementById('email-btn').textContent = isSignUpMode ? 'Create Account' : 'Sign In with Email';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const resp = await fetch('/api/config');
+        const config = await resp.json();
+
+        if (config.skipAuth) {
+          console.log('[Auth] skipAuth enabled. Auto-logging in demo_user...');
+          localStorage.setItem('medlive_uid', 'demo_user');
+          localStorage.setItem('medlive_id_token', 'demo');
+          localStorage.setItem('medlive_display_name', 'Demo User');
+
+          try {
+            const pRes = await fetch('/api/auth/profile', {
+              headers: { Authorization: 'Bearer demo' }
+            });
+            if (pRes.status === 404) {
+              window.location.href = '/static/onboarding.html';
+            } else if (pRes.ok) {
+              const profile = await pRes.json();
+              if (profile.language) localStorage.setItem('medlive_language', profile.language);
+              if (profile.companion_name) localStorage.setItem('medlive_companion_name', profile.companion_name);
+              if (profile.avatar_b64) localStorage.setItem('medlive_avatar', profile.avatar_b64);
+              if (profile.voice_name) localStorage.setItem('medlive_voice_name', profile.voice_name);
+              if (profile.name) localStorage.setItem('medlive_display_name', profile.name);
+              showWelcomeBack(profile);
+            } else {
+              window.location.href = '/static/onboarding.html';
+            }
+          } catch (e) {
+            window.location.href = '/static/onboarding.html';
+          }
+        }
+      } catch (err) {
+        console.error('[Auth] Failed to fetch config', err);
+      }
+    });
+
+    function toggleMode() {
+      isSignUpMode = !isSignUpMode;
+      document.getElementById('toggle-text').textContent = isSignUpMode
+        ? 'Already have an account? ' : "Don't have an account? ";
+      document.getElementById('toggle-link').textContent = isSignUpMode ? 'Sign in' : 'Create one';
+      document.getElementById('email-btn').textContent = isSignUpMode ? 'Create Account' : 'Sign In with Email';
+      document.getElementById('auth-message').className = 'auth-message';
+    }
+
+    async function onAuthSuccess(user) {
+      try {
+        showMessage('Signing in...', 'info');
+        const idToken = await user.getIdToken(true);
+        localStorage.setItem('medlive_uid', user.uid);
+        localStorage.setItem('medlive_id_token', idToken);
+        localStorage.setItem('medlive_display_name', user.displayName || user.email || '');
+
+        // Check if profile exists; if not → onboarding
+        const resp = await fetch('/api/auth/profile', {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+
+        if (resp.status === 404) {
+          window.location.href = '/static/onboarding.html';
+        } else if (resp.ok) {
+          const profile = await resp.json();
+          // Restore profile into localStorage for offline-first reads
+          if (profile.language) localStorage.setItem('medlive_language', profile.language);
+          if (profile.companion_name) localStorage.setItem('medlive_companion_name', profile.companion_name);
+          if (profile.avatar_b64) localStorage.setItem('medlive_avatar', profile.avatar_b64);
+          if (profile.voice_name) localStorage.setItem('medlive_voice_name', profile.voice_name);
+          if (profile.name) localStorage.setItem('medlive_display_name', profile.name);
+          showWelcomeBack(profile);
+        } else {
+          // Profile endpoint failed but user is signed in — go to onboarding
+          window.location.href = '/static/onboarding.html';
+        }
+      } catch (err) {
+        console.error('[Auth] onAuthSuccess error:', err);
+        showMessage('Sign-in succeeded but profile check failed. Redirecting...');
+        setTimeout(() => window.location.href = '/static/onboarding.html', 1500);
+      }
+    }
+
+    async function signInWithGoogle() {
+      setLoading(true);
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        const result = await auth.signInWithPopup(provider);
+        await onAuthSuccess(result.user);
+      } catch (err) {
+        console.error('[Auth] Google sign-in error:', err);
+        showMessage(err.message || 'Google sign-in failed. Please try again.');
+        setLoading(false);
+      }
+    }
+
+    async function handleEmailForm(e) {
+      e.preventDefault();
+      const email = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value;
+      setLoading(true);
+
+      try {
+        let result;
+        if (isSignUpMode) {
+          result = await auth.createUserWithEmailAndPassword(email, password);
+        } else {
+          result = await auth.signInWithEmailAndPassword(email, password);
+        }
+        await onAuthSuccess(result.user);
+      } catch (err) {
+        console.error('[Auth] Email sign-in error:', err);
+        const msg = err.code === 'auth/user-not-found' ? 'No account found. Click "Create one" to register.'
+          : err.code === 'auth/wrong-password' ? 'Incorrect password. Please try again.'
+            : err.code === 'auth/email-already-in-use' ? 'Email already registered. Sign in instead.'
+              : err.message || 'Sign-in failed.';
+        showMessage(msg);
+        setLoading(false);
+      }
+    }
+
+    function showWelcomeBack(profile) {
+      const banner = document.getElementById('welcome-back-banner');
+      if (!banner) { window.location.href = '/'; return; }
+
+      const name = profile.name || profile.companion_name || '';
+      const nameEl = document.getElementById('welcome-back-name');
+      if (name && nameEl) nameEl.textContent = `Welcome back, ${name}! 👋`;
+
+      const avatarEl = document.getElementById('welcome-back-avatar');
+      if (profile.avatar_b64 && avatarEl) {
+        avatarEl.src = profile.avatar_b64;
+        avatarEl.style.display = 'block';
+      } else if (avatarEl) {
+        avatarEl.style.display = 'none';
+      }
+
+      const card = document.querySelector('.auth-card');
+      if (card) card.style.display = 'none';
+      banner.style.display = 'flex';
+      // setTimeout(() => { window.location.href = '/'; }, 2200);
+    }
+
+    // Auto-refresh token every 50 minutes
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        // If already signed in and has token in localStorage, check if we should redirect
+        const existingToken = localStorage.getItem('medlive_id_token');
+        if (!existingToken) {
+          // Silently refresh
+          const idToken = await user.getIdToken(true);
+          localStorage.setItem('medlive_uid', user.uid);
+          localStorage.setItem('medlive_id_token', idToken);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

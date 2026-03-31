@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
+  <title>MedLive</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&display=swap"
+    rel="stylesheet">
+
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1>✏️ MedLive</h1>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="menu-btn" id="family-link-btn" aria-label="Family Link Code" title="Share with Family"
+          onclick="showFamilyLinkModal()">
+          <span class="material-icons">link</span>
+        </button>
+        <a href="/static/dashboard.html" class="menu-btn" aria-label="Family Dashboard" title="Family Dashboard"
+          style="text-decoration:none;">
+          <span class="material-icons">dashboard</span>
+        </a>
+        <button class="menu-btn" id="med-schedule-btn" aria-label="Medication Schedule" title="Medication Schedule">
+          <span class="material-icons">alarm</span>
+        </button>
+        <button class="menu-btn" id="change-persona-btn" aria-label="Edit profile" title="Edit Profile">
+          <span class="material-icons">manage_accounts</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Avatar Section — tap to start/stop listening -->
+  <section class="avatar-hero" id="avatar-hero">
+    <div class="aura-ring" id="aura-ring"></div>
+    <div class="avatar-hero-tap" id="avatar-hero-tap" role="button" tabindex="0" aria-label="Tap to speak">
+      <img src="/static/img/avatar_placeholder.png" alt="Companion Avatar" id="companion-avatar" class="avatar-hero-img"
+        onerror="this.style.display='none'; document.getElementById('avatar-icon-fallback').style.display='flex'" />
+      <div class="avatar-icon-fallback" id="avatar-icon-fallback">
+        <span class="material-icons">face</span>
+      </div>
+    </div>
+
+    <!-- Companion name -->
+    <p class="companion-name-label" id="companion-name">Enfermera Elena</p>
+
+    <!-- Greeting bubble — hides when chat opens -->
+    <div class="avatar-bubble" id="avatar-bubble">
+      <p id="companion-greeting">¡Hola! ¿En qué te ayudo?</p>
+    </div>
+
+    <!-- Status text (Tap to speak / Listening... / Speaking...) -->
+    <p class="hero-status-text" id="status-text">Connecting...</p>
+
+    <!-- Active Agent Badge (hidden by default, shown when a sub-agent is responding) -->
+    <div id="agent-badge" class="agent-badge" style="display:none;">
+      <span id="agent-badge-icon">🛡️</span>
+      <span id="agent-badge-label">Guardian</span>
+    </div>
+
+    <!-- Interpreter Banner (Hidden by default) -->
+    <div id="interpreter-banner" class="interpreter-banner" style="display:none;">
+      <span class="material-icons">language</span>
+      <span id="interpreter-banner-text">Interpreter Active: Kannada ↔ English</span>
+    </div>
+  </section>
+
+  <!-- Action Grid — docked below hero -->
+  <section class="action-grid hero-action-grid">
+    <button class="action-btn pill-btn" id="show-pill-btn" style="position:relative;">
+      <div class="tape-deco"></div>
+      <span class="material-icons">medication</span>
+      <span id="label-pill">Verify Pill</span>
+    </button>
+    <button class="action-btn scan-btn" id="scan-btn" style="position:relative;">
+      <div class="tack-deco"></div>
+      <span class="material-icons">document_scanner</span>
+      <span id="label-scan">Scan Rx</span>
+    </button>
+    <button class="action-btn doc-btn" style="position:relative;">
+      <div class="tape-deco"></div>
+      <span class="material-icons">call</span>
+      <span id="label-doctor">Call Doctor</span>
+    </button>
+    <button class="action-btn" id="book-appt-btn" style="position:relative;background:var(--postit,#fff9c4);">
+      <div class="tape-deco"></div>
+      <span class="material-icons">event_available</span>
+      <span id="label-appt">Book Appt</span>
+    </button>
+    <button class="action-btn" id="log-food-btn" style="position:relative;">
+      <div class="tack-deco"></div>
+      <span class="material-icons">restaurant</span>
+      <span id="label-food">Log Food</span>
+    </button>
+    <button class="action-btn" id="live-translate-btn" style="position:relative;background:var(--accent,#81d4fa);">
+      <div class="tape-deco"></div>
+      <span class="material-icons">language</span>
+      <span id="label-translate">Live Translate</span>
+    </button>
+    <button class="action-btn" id="ambient-camera-btn" style="position:relative;background:var(--postit,#fff9c4);">
+      <div class="tack-deco"></div>
+      <span class="material-icons">videocam</span>
+      <span id="label-ambient">Show Camera</span>
+    </button>
+    <button class="action-btn sos-btn" style="position:relative;">
+      <div class="tack-deco" style="background:var(--accent);"></div>
+      <span>SOS</span>
+      <span id="label-sos">Emergency</span>
+    </button>
+  </section>
+
+  <!-- Chat Panel — slides up when conversation starts -->
+  <div class="chat-panel collapsed" id="transcript-drawer">
+    <div class="chat-panel-handle" id="drawer-handle"></div>
+    <div class="transcript-container" id="transcript"></div>
+    <div class="chat-panel-footer">
+      <div class="chat-input-pill">
+        <input type="text" id="chat-text-input" class="chat-text-input" placeholder="Aa" autocomplete="off" />
+        <button class="chat-action-btn" id="chat-send-btn" title="Send (Enter)">
+          <span class="material-icons">send</span>
+        </button>
+        <button class="chat-action-btn active" id="chat-mic-btn" title="Toggle Microphone">
+          <span class="material-icons">mic</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Feed (hidden by default, shown for pill verify) -->
+  <div class="camera-container" id="camera-container">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <div class="camera-overlay">
+      <span>Camera Active</span>
+      <button id="close-camera-btn" class="icon-btn">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Scan Overlay (fullscreen camera for document scanning) -->
+  <div class="scan-overlay" id="scan-overlay">
+    <video id="scan-video" autoplay playsinline muted></video>
+    <div class="scan-frame-guide"></div>
+    <div class="scan-controls">
+      <button class="scan-type-toggle" id="scan-type-toggle">
+        <span class="material-icons">description</span>
+        <span id="scan-type-label">Prescription</span>
+      </button>
+      <button class="scan-capture-btn" id="scan-capture-btn">
+        <span class="material-icons">photo_camera</span>
+      </button>
+      <button class="scan-close-btn" id="scan-close-btn">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <!-- Results overlay (shown after extraction) -->
+    <div class="scan-results" id="scan-results" style="display:none;">
+      <div class="scan-results-card">
+        <h3 id="scan-results-title">Scan Results</h3>
+        <div id="scan-results-body"></div>
+        <div class="scan-results-actions">
+          <button class="scan-results-btn confirm" id="scan-confirm-btn">Save</button>
+          <button class="scan-results-btn retry" id="scan-retry-btn">Retry</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Food Scanner Overlay -->
+  <div class="scan-overlay" id="food-overlay" style="display:none; z-index: 2000;">
+    <video id="food-video" autoplay playsinline muted></video>
+    <div class="scan-frame-guide"
+      style="border-radius: 50%; width: 80vw; height: 80vw; max-width: 400px; max-height: 400px; border-color: rgba(255,255,255,0.7); box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);">
+    </div>
+    <div class="scan-controls">
+      <div style="flex:1"></div>
+      <button class="scan-capture-btn" id="food-capture-btn" style="background:var(--accent);">
+        <span class="material-icons">restaurant</span>
+      </button>
+      <div style="flex:1; display:flex; justify-content:flex-end; padding-right: 2rem;">
+        <button class="scan-close-btn" id="food-close-btn" style="position:static;">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+    </div>
+    <!-- Results overlay -->
+    <div class="scan-results" id="food-results" style="display:none;">
+      <div class="scan-results-card">
+        <h3 id="food-results-title">🍽️ Food Macros</h3>
+        <div id="food-results-body" style="text-align: left; font-size: 0.95rem;"></div>
+        <div class="scan-results-actions">
+          <button class="scan-results-btn confirm" id="food-confirm-btn">Log Food</button>
+          <button class="scan-results-btn retry" id="food-retry-btn">Retake</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (auth + messaging for push reminders) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+  <script>
+    // Initialize Firebase (guard against double-init if auth.html was visited)
+    const _fbConfig = {
+      apiKey: "AIzaSyAE7FlwaMT_WIJk5a1np2xFQp_a8huGSro",
+      authDomain: "medlive-488722.firebaseapp.com",
+      projectId: "medlive-488722",
+      storageBucket: "medlive-488722.firebasestorage.app",
+      messagingSenderId: "479757625763",
+      appId: "1:479757625763:web:61c5299bf510e2b3c3d216"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(_fbConfig);
+  </script>
+
+  <!-- Load config first; if skipAuth (testing), set demo credentials so app loads without login -->
+  <script>
+    (function () {
+      fetch("/api/config")
+        .then(function (r) { return r.json(); })
+        .then(function (config) {
+          if (config.skipAuth) {
+            localStorage.setItem("medlive_uid", "demo_user");
+            localStorage.setItem("medlive_id_token", "demo");
+          }
+          var s = document.createElement("script");
+          s.type = "module";
+          s.src = "/static/js/app.js";
+          document.body.appendChild(s);
+        })
+        .catch(function () {
+          var s = document.createElement("script");
+          s.type = "module";
+          s.src = "/static/js/app.js";
+          document.body.appendChild(s);
+        });
+    })();
+  </script>
+
+  <!-- Family Link Code Modal -->
+  <div id="family-link-modal"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:none;align-items:center;justify-content:center;">
+    <div
+      style="background:var(--card,#fffdf7);border:3px solid var(--fg,#2d2d2d);border-radius:12px;padding:28px 32px;max-width:340px;width:90%;text-align:center;box-shadow:6px 6px 0 0 var(--fg,#2d2d2d);font-family:'Kalam',cursive;">
+      <h2 style="margin:0 0 8px;font-size:1.3rem;">🔗 Family Link Code</h2>
+      <p style="opacity:0.7;font-size:0.9rem;margin-bottom:16px;">Share this code with your caregiver so they can
+        monitor your health on the dashboard.</p>
+      <div id="family-code-display"
+        style="font-size:2.2rem;letter-spacing:8px;font-weight:700;color:var(--secondary,#2d5da1);padding:12px;border:2px dashed var(--fg,#2d2d2d);border-radius:8px;margin-bottom:8px;">
+        ...</div>
+      <p id="family-code-expiry" style="font-size:0.8rem;opacity:0.5;margin-bottom:16px;"></p>
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button onclick="copyFamilyCode()"
+          style="padding:8px 18px;border:2px solid var(--fg,#2d2d2d);border-radius:8px;background:var(--postit,#fff9c4);cursor:pointer;font-family:inherit;font-size:0.95rem;">📋
+          Copy</button>
+        <button onclick="closeFamilyLinkModal()"
+          style="padding:8px 18px;border:2px solid var(--fg,#2d2d2d);border-radius:8px;background:var(--card,#fffdf7);cursor:pointer;font-family:inherit;font-size:0.95rem;">Close</button>
+      </div>
+      <p id="family-code-error" style="color:var(--accent,#ff4d4d);font-size:0.85rem;margin-top:8px;min-height:18px;">
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let _familyCode = '';
+    async function showFamilyLinkModal() {
+      const modal = document.getElementById('family-link-modal');
+      const display = document.getElementById('family-code-display');
+      const expiry = document.getElementById('family-code-expiry');
+      const errEl = document.getElementById('family-code-error');
+      modal.style.display = 'flex';
+      display.textContent = '...';
+      expiry.textContent = '';
+      errEl.textContent = '';
+      try {
+        const token = localStorage.getItem('medlive_id_token') || 'demo';
+        const resp = await fetch('/api/family/code/generate', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (!resp.ok) throw new Error('Failed to generate code');
+        const data = await resp.json();
+        _familyCode = data.code;
+        display.textContent = data.code;
+        const exp = new Date(data.expires_at);
+        expiry.textContent = 'Expires: ' + exp.toLocaleString();
+      } catch (e) {
+        display.textContent = '—';
+        errEl.textContent = 'Could not generate code. Try again.';
+      }
+    }
+    function closeFamilyLinkModal() {
+      document.getElementById('family-link-modal').style.display = 'none';
+    }
+    function copyFamilyCode() {
+      if (_familyCode) {
+        navigator.clipboard.writeText(_familyCode);
+        document.getElementById('family-code-error').textContent = '✅ Copied!';
+        setTimeout(() => { document.getElementById('family-code-error').textContent = ''; }, 2000);
+      }
+    }
+  </script>
+
+
+  <!-- ===== Profile Settings Modal (bottom sheet) ===== -->
+  <div id="profile-modal"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:flex-end;justify-content:center;">
+    <div class="profile-modal-card" id="profile-modal-card">
+      <div class="tape-deco" style="position:absolute;top:-10px;width:80px;left:calc(50% - 40px);"></div>
+
+      <!-- Header -->
+      <div class="profile-modal-header">
+        <span style="font-size:1.3rem;font-weight:700;">✏️ Your Profile</span>
+        <button class="profile-modal-close" id="profile-modal-close" aria-label="Close">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Avatar -->
+      <div class="profile-avatar-row">
+        <div class="profile-avatar-wrap">
+          <img class="profile-avatar-img" id="profile-avatar-preview" src="" alt="Avatar"
+            onerror="this.style.display='none';document.getElementById('profile-avatar-fallback').style.display='flex';" />
+          <div class="profile-avatar-fallback" id="profile-avatar-fallback">
+            <span class="material-icons" style="font-size:48px;color:var(--muted);">face</span>
+          </div>
+        </div>
+        <div class="profile-avatar-actions">
+          <button class="profile-avatar-btn" id="profile-gen-avatar-btn">🎨 Regenerate</button>
+          <button class="profile-avatar-btn" id="profile-upload-avatar-btn">📷 Upload Photo</button>
+          <input type="file" id="profile-photo-input" accept="image/*" style="display:none;" />
+        </div>
+      </div>
+      <p class="profile-generating-msg" id="profile-generating-msg" style="display:none;">⏳ Generating avatar…</p>
+
+      <!-- Your Name -->
+      <div class="profile-field-group">
+        <label class="profile-field-label" for="profile-name-input">Your Name</label>
+        <input class="profile-field-input" id="profile-name-input" type="text" placeholder="Your display name" />
+      </div>
+
+      <!-- Language -->
+      <div class="profile-field-group">
+        <label class="profile-field-label">Language</label>
+        <div class="profile-lang-grid">
+          <button class="profile-lang-btn" data-lang="English">🇺🇸 English</button>
+          <button class="profile-lang-btn" data-lang="Hindi">🇮🇳 Hindi</button>
+          <button class="profile-lang-btn" data-lang="Spanish">🇲🇽 Spanish</button>
+          <button class="profile-lang-btn" data-lang="Kannada">🇮🇳 Kannada</button>
+        </div>
+      </div>
+
+      <!-- Companion Name -->
+      <div class="profile-field-group">
+        <label class="profile-field-label" for="profile-companion-input">Companion Name</label>
+        <input class="profile-field-input" id="profile-companion-input" type="text" placeholder="e.g. Dr. Chen" />
+        <div class="profile-companion-chips" id="profile-companion-chips"></div>
+      </div>
+
+      <!-- Voice -->
+      <div class="profile-field-group">
+        <label class="profile-field-label">Voice</label>
+        <div class="profile-voice-grid">
+          <button class="profile-voice-btn" data-voice="Aoede">👩 Aoede</button>
+          <button class="profile-voice-btn" data-voice="Fenrir">👨 Fenrir</button>
+          <button class="profile-voice-btn" data-voice="Kore">👧 Kore</button>
+          <button class="profile-voice-btn" data-voice="Charon">👴 Charon</button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <p class="profile-error" id="profile-error" style="display:none;"></p>
+
+      <!-- Demo notice -->
+      <div class="profile-demo-notice" id="profile-demo-notice" style="display:none;">
+        🔒 Demo mode — changes are saved locally only
+      </div>
+
+      <!-- Actions -->
+      <div class="profile-modal-actions">
+        <button class="profile-btn-cancel" id="profile-cancel-btn">Cancel</button>
+        <button class="profile-btn-save" id="profile-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Medication Schedule Modal (bottom sheet) ===== -->
+  <div id="med-schedule-modal"
+    style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:flex-end;justify-content:center;">
+    <div class="med-schedule-card" id="med-schedule-card">
+      <div class="tape-deco" style="position:absolute;top:-10px;width:80px;left:calc(50% - 40px);"></div>
+
+      <!-- Header -->
+      <div class="profile-modal-header">
+        <span style="font-size:1.3rem;font-weight:700;">💊 Medication Schedule</span>
+        <button class="profile-modal-close" id="med-schedule-close" aria-label="Close">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <!-- Next dose countdown -->
+      <div id="med-next-dose" class="med-next-dose">
+        <span class="material-icons" style="color:var(--secondary);font-size:20px;">schedule</span>
+        <span id="med-next-dose-text">Calculating...</span>
+      </div>
+
+      <!-- Medication list -->
+      <div id="med-list-container" class="med-list-container">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Empty state -->
+      <div id="med-empty-state" class="med-empty-state" style="display:none;">
+        <span class="material-icons" style="font-size:48px;opacity:0.3;">medication</span>
+        <p style="margin-top:8px;opacity:0.6;">No medications yet</p>
+        <p style="font-size:0.85rem;opacity:0.4;">Add one below or scan a prescription</p>
+      </div>
+
+      <!-- Add medication form (collapsible) -->
+      <details id="med-add-details" class="med-add-section">
+        <summary class="med-add-summary">
+          <span class="material-icons" style="font-size:18px;">add_circle</span>
+          Add Medication
+        </summary>
+        <div class="med-add-form">
+          <div class="profile-field-group">
+            <label class="profile-field-label">Name</label>
+            <input class="profile-field-input" id="med-add-name" type="text" placeholder="e.g. Metformin" />
+          </div>
+          <div class="profile-field-group">
+            <label class="profile-field-label">Dosage</label>
+            <input class="profile-field-input" id="med-add-dosage" type="text" placeholder="e.g. 500mg" />
+          </div>
+          <div class="profile-field-group">
+            <label class="profile-field-label">Schedule Times</label>
+            <div class="med-time-presets">
+              <button type="button" class="med-time-chip" data-time="08:00">🌅 Morning 8am</button>
+              <button type="button" class="med-time-chip" data-time="13:00">☀️ Afternoon 1pm</button>
+              <button type="button" class="med-time-chip" data-time="18:00">🌆 Evening 6pm</button>
+              <button type="button" class="med-time-chip" data-time="21:00">🌙 Night 9pm</button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+              <input type="time" id="med-add-custom-time" class="profile-field-input" style="width:auto;flex:1;" />
+              <button type="button" id="med-add-custom-time-btn" class="profile-avatar-btn">+ Add</button>
+            </div>
+            <div id="med-selected-times" class="med-selected-times"></div>
+          </div>
+          <button type="button" id="med-add-save-btn" class="profile-btn-save" style="width:100%;margin-top:8px;">
+            Save Medication
+          </button>
+        </div>
+      </details>
+
+      <!-- Demo notice -->
+      <div class="profile-demo-notice" id="med-demo-notice" style="display:none;">
+        🔒 Demo mode — using sample medications
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>

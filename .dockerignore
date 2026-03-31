@@ -1,0 +1,58 @@
+# =============================================================================
+# .dockerignore — keeps Docker build context lean and fast
+# =============================================================================
+
+# Node / Frontend
+node_modules/
+dist/
+.npm/
+*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+.uv/
+*.egg-info/
+
+# Test / Dev artifacts
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Credentials & secrets — NEVER bake into image; use Secret Manager at runtime
+credentials/
+*.json.bak
+.env
+.env.*
+!.env.example
+
+# Terraform / infra (build-time only)
+infra/
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docs / extra assets
+*.md
+docs/
+
+# CI
+.github/

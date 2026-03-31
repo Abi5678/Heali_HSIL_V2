@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Health Dashboard - MedLive</title>
+
+    <!-- Google Fonts: Hand-Drawn System -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&display=swap"
+        rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Firebase Auth SDK (for caregiver sign-in and token refresh) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <style>
+        body {
+            padding-bottom: 40px;
+        }
+
+        .dashboard-layout {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 240px;
+            background: var(--card);
+            border-right: 3px solid var(--fg);
+            padding: 24px 20px;
+            box-shadow: 4px 0 0 0 var(--fg);
+        }
+
+        .sidebar-logo {
+            font-family: var(--font-heading);
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transform: rotate(-1deg);
+            text-decoration: none;
+            color: var(--fg);
+            transition: transform 0.2s ease;
+        }
+
+        .sidebar-logo:hover {
+            transform: rotate(-2deg) scale(1.02);
+            cursor: pointer;
+        }
+
+        .sidebar li {
+            margin-bottom: 8px;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: var(--wobbly-sm);
+            text-decoration: none;
+            color: var(--fg);
+            font-size: 1.05rem;
+            border: 2px solid transparent;
+            transition: all 0.1s;
+        }
+
+        .sidebar a:hover {
+            background: var(--postit);
+            border-color: var(--fg);
+            transform: translate(2px, 1px) rotate(0.5deg);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .sidebar a.active {
+            background: var(--postit);
+            border-color: var(--fg);
+            box-shadow: var(--shadow);
+            font-weight: 700;
+            font-family: var(--font-heading);
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            flex: 1;
+            padding: 28px 32px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .header-top h1 {
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            transform: rotate(-0.5deg);
+        }
+
+        .header-top p {
+            opacity: 0.7;
+            font-size: 1rem;
+        }
+
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--wobbly-sm);
+            background: var(--muted);
+            border: 2px solid var(--fg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-hover);
+        }
+
+        /* --- Grid --- */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--card);
+            border: 3px solid var(--fg);
+            border-radius: var(--wobbly-md);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .card-header {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px dashed var(--muted);
+        }
+
+        /* --- Stats Row --- */
+        .stats-section-title {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            transform: rotate(-0.5deg);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 16px 12px;
+            border: 2px solid var(--fg);
+            border-radius: var(--wobbly-sm);
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .stat-card:nth-child(1) {
+            transform: rotate(-1deg);
+        }
+
+        .stat-card:nth-child(2) {
+            transform: rotate(0.5deg);
+        }
+
+        .stat-card:nth-child(3) {
+            transform: rotate(-0.5deg);
+        }
+
+        .stat-card:nth-child(4) {
+            transform: rotate(1deg);
+        }
+
+        .stat-card:hover {
+            transform: translate(2px, 2px) rotate(0deg);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-value {
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--fg);
+            margin: 8px 0;
+        }
+
+        .stat-value span {
+            font-size: 0.85rem;
+            font-weight: 400;
+            font-family: var(--font-body);
+        }
+
+        .stat-label {
+            font-family: var(--font-heading);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.7;
+        }
+
+        .stat-trend {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .trend-up {
+            color: var(--accent);
+        }
+
+        .trend-down {
+            color: var(--success);
+        }
+
+        .trend-stable {
+            opacity: 0.6;
+        }
+
+        /* --- Alerts --- */
+        .alert-item {
+            display: flex;
+            gap: 14px;
+            padding: 14px;
+            border: 2px solid var(--fg);
+            border-radius: var(--wobbly-sm);
+            background: #fff5f5;
+            border-left: 5px solid var(--accent);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .alert-item.warning {
+            background: var(--postit);
+            border-left-color: var(--warning);
+        }
+
+        .alert-content h4 {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--accent);
+        }
+
+        .alert-item.warning h4 {
+            color: #b45309;
+        }
+
+        .alert-item.emergency {
+            background: #fee2e2;
+            border-left-color: #dc2626;
+            border-color: #dc2626;
+            animation: emergency-pulse 1.5s ease-in-out infinite;
+        }
+
+        .alert-item.emergency h4 {
+            color: #dc2626;
+            font-size: 1.05rem;
+        }
+
+        @keyframes emergency-pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 12px 4px rgba(220, 38, 38, 0.3);
+            }
+        }
+
+        .alert-time {
+            font-size: 0.85rem;
+            opacity: 0.6;
+            margin-top: 6px;
+        }
+
+        .btn-outline {
+            background: var(--card);
+            border: 2px solid var(--fg);
+            padding: 6px 14px;
+            border-radius: var(--wobbly-sm);
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            margin-top: 10px;
+            box-shadow: var(--shadow-hover);
+            transition: all 0.1s;
+        }
+
+        .btn-outline:hover {
+            background: var(--postit);
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0 0 var(--fg);
+        }
+
+        /* --- Link Code Modal --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+        }
+
+        .modal-box {
+            background: var(--card);
+            border: 3px solid var(--fg);
+            border-radius: var(--wobbly-md);
+            padding: 32px 28px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 6px 6px 0 0 var(--fg);
+            transform: rotate(-0.5deg);
+            text-align: center;
+        }
+
+        .modal-box h2 {
+            font-family: var(--font-heading);
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+        }
+
+        .modal-box p {
+            opacity: 0.75;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+
+        .modal-box input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            text-align: center;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            border: 3px solid var(--fg);
+            border-radius: var(--wobbly-sm);
+            background: var(--bg);
+            box-shadow: var(--shadow);
+            margin-bottom: 12px;
+        }
+
+        .modal-box input[type="text"]:focus {
+            outline: none;
+            box-shadow: var(--shadow-hover);
+        }
+
+        .modal-box .btn-primary {
+            background: var(--secondary);
+            color: var(--card);
+            border: 3px solid var(--fg);
+            padding: 12px 24px;
+            border-radius: var(--wobbly-sm);
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: all 0.1s;
+            width: 100%;
+        }
+
+        .modal-box .btn-primary:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 0 var(--fg);
+        }
+
+        .modal-box .error-text {
+            color: var(--accent);
+            font-size: 0.9rem;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        /* --- Loading state --- */
+        .loading-shimmer {
+            opacity: 0.5;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .dashboard-error {
+            color: var(--accent);
+            font-family: var(--font-heading);
+            padding: 12px;
+            border: 2px dashed var(--accent);
+            border-radius: var(--wobbly-sm);
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-layout {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 3px solid var(--fg);
+                box-shadow: 0 4px 0 0 var(--fg);
+            }
+
+            .sidebar ul {
+                display: flex;
+                gap: 8px;
+                margin-top: 16px;
+                overflow-x: auto;
+            }
+
+            .sidebar li {
+                margin-bottom: 0;
+            }
+
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Link Code Modal (shown when no patient is linked) -->
+    <div class="modal-overlay" id="link-prompt">
+        <div class="modal-box">
+            <h2>🔗 Link to a Patient</h2>
+            <p>Ask your family member to open MedLive and go to Settings → Family Link to get their 5-character code.
+            </p>
+            <input type="text" id="link-code-input" maxlength="5" placeholder="A2B9X"
+                oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter') submitLinkCode()" />
+            <button class="btn-primary" onclick="submitLinkCode()">Connect</button>
+            <div class="error-text" id="link-error"></div>
+        </div>
+    </div>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="/" class="sidebar-logo">
+                <span class="material-icons">monitor_heart</span>
+                ✏️ MedLive
+            </a>
+            <ul>
+                <li><a href="#section-overview" class="active" onclick="switchSection(this)"><span
+                            class="material-icons">home</span> Overview</a></li>
+                <li><a href="#section-adherence" onclick="switchSection(this)"><span
+                            class="material-icons">medication</span> Medications</a></li>
+                <li><a href="#section-vitals" onclick="switchSection(this)"><span class="material-icons">favorite</span>
+                        Vitals</a></li>
+                <li><a href="#section-alerts" onclick="switchSection(this)"><span
+                            class="material-icons">notifications</span> Alerts</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header-top">
+                <div>
+                    <h1 id="welcome-heading" class="loading-shimmer">Loading patient data… 👋</h1>
+                    <p id="welcome-sub">Fetching live health status…</p>
+                    <p id="last-updated" style="font-size:0.8rem;opacity:0.45;margin-top:4px;"></p>
+                </div>
+                <div>
+                    <div class="user-avatar">
+                        <span class="material-icons" style="color:var(--fg);">person</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error banner (hidden by default) -->
+            <div class="dashboard-error" id="dashboard-error"></div>
+
+            <div class="grid-container" id="section-overview">
+                <!-- Adherence Chart -->
+                <div class="card" id="section-adherence" style="position:relative;">
+                    <div class="tape-deco"></div>
+                    <div class="card-header" id="adherence-header">📊 7-Day Medication Adherence</div>
+                    <canvas id="adherenceChart" height="100"></canvas>
+                </div>
+
+                <!-- Active Alerts -->
+                <div class="card" id="section-alerts" style="position:relative;">
+                    <div class="tack-deco"></div>
+                    <div class="card-header">🚨 Active Alerts</div>
+                    <div id="alerts-container">
+                        <!-- Populated by renderAlerts() -->
+                        <div style="text-align:center;opacity:0.5;padding:24px">
+                            <span class="material-icons" style="font-size:32px">hourglass_empty</span>
+                            <p>Loading alerts…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vitals Grid -->
+            <div style="margin-top: 28px" id="section-vitals">
+                <h3 class="stats-section-title">📋 Recent Vital Signs</h3>
+                <div class="stats-grid" id="vitals-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">
+                            <span class="material-icons"
+                                style="color:var(--secondary); font-size:18px; vertical-align:middle;">bloodtype</span>
+                            BLOOD PRESSURE
+                        </div>
+                        <div class="stat-value" id="bp-val">— <span>mmHg</span></div>
+                        <div class="stat-trend" id="bp-trend">—</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">
+                            <span class="material-icons"
+                                style="color:var(--warning); font-size:18px; vertical-align:middle;">water_drop</span>
+                            BLOOD SUGAR
+                        </div>
+                        <div class="stat-value" id="bs-val">— <span>mg/dL</span></div>
+                        <div class="stat-trend" id="bs-trend">—</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">
+                            <span class="material-icons"
+                                style="color:var(--accent); font-size:18px; vertical-align:middle;">medication</span>
+                            DOSES TAKEN
+                        </div>
+                        <div class="stat-value" id="doses-taken-val">— <span>/ 7 days</span></div>
+                        <div class="stat-trend trend-stable" id="doses-trend">—</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-label">
+                            <span class="material-icons"
+                                style="color:var(--secondary); font-size:18px; vertical-align:middle;">task_alt</span>
+                            ADHERENCE SCORE
+                        </div>
+                        <div class="stat-value" id="adherence-score-val">— <span>%</span></div>
+                        <div class="stat-trend" id="adherence-rating-val">—</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // ---------------------------------------------------------------------------
+        // Firebase Init (same project as patient app)
+        // ---------------------------------------------------------------------------
+        const _fbConfig = {
+            apiKey: "AIzaSyAE7FlwaMT_WIJk5a1np2xFQp_a8huGSro",
+            authDomain: "medlive-488722.firebaseapp.com",
+            projectId: "medlive-488722",
+            storageBucket: "medlive-488722.firebasestorage.app",
+            messagingSenderId: "479757625763",
+            appId: "1:479757625763:web:61c5299bf510e2b3c3d216",
+        };
+        if (!firebase.apps.length) firebase.initializeApp(_fbConfig);
+
+        let _adherenceChart = null;
+
+        // ---------------------------------------------------------------------------
+        // Auth Gate: redirect to /static/auth.html if not signed in
+        // ---------------------------------------------------------------------------
+        (async function initDashboard() {
+            // Check if server is in demo mode
+            let skipAuth = false;
+            try {
+                const cfgResp = await fetch('/api/config');
+                if (cfgResp.ok) {
+                    const cfg = await cfgResp.json();
+                    skipAuth = cfg.skipAuth === true;
+                }
+            } catch (e) { /* ignore */ }
+
+            if (skipAuth) {
+                // Demo mode — load dashboard for demo_user directly
+                const patientUid = localStorage.getItem("medlive_patient_uid") || "demo_user";
+                await loadDashboard("demo", patientUid);
+                startAutoRefresh("demo", patientUid);
+                return;
+            }
+
+            firebase.auth().onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = "/static/auth.html";
+                    return;
+                }
+
+                // Refresh token and persist for API calls
+                const token = await user.getIdToken(true);
+                localStorage.setItem("medlive_id_token", token);
+
+                // Resolve patient UID: stored after family code verify, OR own UID (self-view)
+                let patientUid = localStorage.getItem("medlive_patient_uid");
+                if (!patientUid) {
+                    // No linked patient → show code prompt
+                    showLinkCodePrompt();
+                    return;
+                }
+
+                await loadDashboard(token, patientUid);
+                startAutoRefresh(token, patientUid);
+            });
+        })();
+
+        // ---------------------------------------------------------------------------
+        // Link Code Modal
+        // ---------------------------------------------------------------------------
+        function showLinkCodePrompt() {
+            document.getElementById("link-prompt").classList.add("visible");
+        }
+
+        async function submitLinkCode() {
+            const code = document.getElementById("link-code-input").value.trim().toUpperCase();
+            const errEl = document.getElementById("link-error");
+            errEl.textContent = "";
+
+            if (!code || code.length < 5) {
+                errEl.textContent = "Please enter the full 5-character code.";
+                return;
+            }
+
+            const user = firebase.auth().currentUser;
+            if (!user) { window.location.href = "/auth.html"; return; }
+            const token = await user.getIdToken();
+
+            try {
+                const resp = await fetch("/api/family/code/verify", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ code }),
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    errEl.textContent = err.detail || "Invalid code. Please try again.";
+                    return;
+                }
+
+                const data = await resp.json();
+                // parent_uid is the patient's UID; parent_name is their companion name
+                localStorage.setItem("medlive_patient_uid", data.parent_uid);
+                localStorage.setItem("medlive_patient_name", data.parent_name || "Your Patient");
+
+                document.getElementById("link-prompt").classList.remove("visible");
+                const freshToken = await user.getIdToken(true);
+                await loadDashboard(freshToken, data.parent_uid);
+                startAutoRefresh(freshToken, data.parent_uid);
+
+            } catch (e) {
+                errEl.textContent = "Network error. Please check your connection.";
+            }
+        }
+
+        // ---------------------------------------------------------------------------
+        // Load Live Dashboard Data
+        // ---------------------------------------------------------------------------
+        async function loadDashboard(token, patientUid) {
+            try {
+                const resp = await fetch(`/api/dashboard?patient_uid=${encodeURIComponent(patientUid)}`, {
+                    headers: { "Authorization": `Bearer ${token}` },
+                });
+
+                if (resp.status === 403) {
+                    // Link expired or broken — re-prompt
+                    localStorage.removeItem("medlive_patient_uid");
+                    localStorage.removeItem("medlive_patient_name");
+                    showLinkCodePrompt();
+                    return;
+                }
+
+                if (!resp.ok) {
+                    showError(`Failed to load data (HTTP ${resp.status}). Please refresh.`);
+                    return;
+                }
+
+                const data = await resp.json();
+                // Persist patient name from API so header always shows the real name
+                if (data.patient_name) {
+                    localStorage.setItem("medlive_patient_name", data.patient_name);
+                }
+                renderWelcomeHeader();
+                renderAdherence(data.adherence);
+                renderAlerts(data.digest, data.blood_pressure_trend);
+                renderVitals(data.blood_sugar_trend, data.blood_pressure_trend, data.adherence);
+                updateLastRefreshed();
+
+            } catch (e) {
+                showError("Network error loading dashboard. Please refresh.");
+                console.error("[Dashboard]", e);
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById("dashboard-error");
+            el.textContent = msg;
+            el.style.display = "block";
+        }
+
+        // ---------------------------------------------------------------------------
+        // Render: Welcome Header
+        // ---------------------------------------------------------------------------
+        function renderWelcomeHeader() {
+            const patientName = localStorage.getItem("medlive_patient_name") || "Your Patient";
+            const h1 = document.getElementById("welcome-heading");
+            h1.textContent = `Health Overview — ${patientName} 👋`;
+            h1.classList.remove("loading-shimmer");
+
+            const sub = document.getElementById("welcome-sub");
+            sub.textContent = "Live data · Last 7 days · " +
+                new Date().toLocaleDateString("en-US", {
+                    weekday: "long", year: "numeric", month: "long", day: "numeric"
+                });
+        }
+
+        // ---------------------------------------------------------------------------
+        // Render: Adherence Chart (donut — taken vs missed)
+        // ---------------------------------------------------------------------------
+        function renderAdherence(adherence) {
+            Chart.defaults.font.family = "'Patrick Hand', cursive";
+            Chart.defaults.font.size = 14;
+            Chart.defaults.color = "#2d2d2d";
+
+            const ctx = document.getElementById("adherenceChart").getContext("2d");
+
+            if (_adherenceChart) _adherenceChart.destroy();
+
+            const taken = adherence.taken ?? 0;
+            const missed = Math.max(adherence.missed ?? 0, 0);
+
+            _adherenceChart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: ["Taken ✓", "Missed ✗"],
+                    datasets: [{
+                        data: [taken, missed],
+                        backgroundColor: ["#2d5da1", "#ff4d4d"],
+                        borderColor: "#2d2d2d",
+                        borderWidth: 2,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: "62%",
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: { family: "'Kalam', cursive", size: 14, weight: "bold" },
+                                usePointStyle: true,
+                                pointStyleWidth: 20,
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.label}: ${ctx.raw} dose${ctx.raw !== 1 ? "s" : ""}`,
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update card header with live score
+            const score = adherence.score ?? 0;
+            const rating = adherence.rating ?? "";
+            document.getElementById("adherence-header").innerHTML =
+                `📊 7-Day Adherence — <span style="color:#2d5da1">${score.toFixed(0)}%</span>` +
+                ` <small style="font-weight:400;font-family:var(--font-body)">(${rating})</small>`;
+        }
+
+        // ---------------------------------------------------------------------------
+        // Render: Alerts (missed meds + BP trend warning)
+        // ---------------------------------------------------------------------------
+        function renderAlerts(digest, bpTrend) {
+            const container = document.getElementById("alerts-container");
+            let html = "";
+
+            // Missed medications today
+            const missed = digest?.medications?.missed ?? [];
+            for (const med of missed) {
+                html += `
+                    <div class="alert-item">
+                        <span class="material-icons" style="color: var(--accent);">warning</span>
+                        <div class="alert-content">
+                            <h4>MISSED DOSE</h4>
+                            <p>${escHtml(med)}</p>
+                            <div class="alert-time">Today</div>
+                        </div>
+                    </div>`;
+            }
+
+            // Blood pressure warning
+            if (bpTrend?.trend === "increasing" && bpTrend?.latest_reading) {
+                const r = bpTrend.latest_reading;
+                html += `
+                    <div class="alert-item warning">
+                        <span class="material-icons" style="color: #b45309;">insights</span>
+                        <div class="alert-content">
+                            <h4>BLOOD PRESSURE TRENDING UP</h4>
+                            <p>Latest: ${escHtml(String(r.value))} ${escHtml(r.unit)}</p>
+                            <div class="alert-time">${escHtml(r.date)}</div>
+                        </div>
+                    </div>`;
+            }
+
+            if (!html) {
+                html = `<div style="text-align:center;opacity:0.6;padding:24px">
+                    <span class="material-icons" style="font-size:36px;color:var(--success)">check_circle</span>
+                    <p style="margin-top:8px">All clear! No active alerts.</p>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // ---------------------------------------------------------------------------
+        // Render: Vitals stat cards
+        // ---------------------------------------------------------------------------
+        function renderVitals(bsTrend, bpTrend, adherence) {
+            // Blood Pressure
+            if (bpTrend?.latest_reading) {
+                const r = bpTrend.latest_reading;
+                document.getElementById("bp-val").innerHTML =
+                    `${escHtml(String(r.value))} <span>${escHtml(r.unit)}</span>`;
+                const trendEl = document.getElementById("bp-trend");
+                trendEl.className = "stat-trend " + trendClass(bpTrend.trend);
+                trendEl.innerHTML = trendIcon(bpTrend.trend) + " " + escHtml(bpTrend.trend);
+            }
+
+            // Blood Sugar
+            if (bsTrend?.latest_reading) {
+                const r = bsTrend.latest_reading;
+                document.getElementById("bs-val").innerHTML =
+                    `${escHtml(String(r.value))} <span>${escHtml(r.unit)}</span>`;
+                const trendEl = document.getElementById("bs-trend");
+                trendEl.className = "stat-trend " + trendClass(bsTrend.trend);
+                trendEl.innerHTML = trendIcon(bsTrend.trend) + " " + escHtml(bsTrend.trend);
+            }
+
+            // Doses taken
+            if (adherence) {
+                document.getElementById("doses-taken-val").innerHTML =
+                    `${adherence.taken ?? "—"} <span>/ ${adherence.total_doses ?? "?"} doses</span>`;
+                document.getElementById("doses-trend").innerHTML =
+                    `${adherence.missed ?? 0} missed`;
+
+                document.getElementById("adherence-score-val").innerHTML =
+                    `${(adherence.score ?? 0).toFixed(0)} <span>%</span>`;
+                document.getElementById("adherence-rating-val").innerHTML =
+                    escHtml(adherence.rating ?? "");
+            }
+        }
+
+        // ---------------------------------------------------------------------------
+        // Helpers
+        // ---------------------------------------------------------------------------
+        function trendClass(trend) {
+            if (trend === "increasing") return "trend-up";
+            if (trend === "improving" || trend === "stable") return "trend-stable";
+            return "trend-stable";
+        }
+
+        function trendIcon(trend) {
+            if (trend === "increasing")
+                return '<span class="material-icons" style="font-size:16px">arrow_upward</span>';
+            if (trend === "improving")
+                return '<span class="material-icons" style="font-size:16px">arrow_downward</span>';
+            return '<span class="material-icons" style="font-size:16px">horizontal_rule</span>';
+        }
+
+        function escHtml(str) {
+            const d = document.createElement("div");
+            d.appendChild(document.createTextNode(str));
+            return d.innerHTML;
+        }
+
+        // ---------------------------------------------------------------------------
+        // Sidebar Section Navigation
+        // ---------------------------------------------------------------------------
+        function switchSection(el) {
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            el.classList.add('active');
+            const target = document.querySelector(el.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ---------------------------------------------------------------------------
+        // Auto-refresh (every 60s)
+        // ---------------------------------------------------------------------------
+        let _refreshInterval = null;
+        function startAutoRefresh(token, patientUid) {
+            if (_refreshInterval) clearInterval(_refreshInterval);
+            _refreshInterval = setInterval(() => {
+                loadDashboard(token, patientUid);
+            }, 60000);
+        }
+
+        function updateLastRefreshed() {
+            const el = document.getElementById('last-updated');
+            if (el) {
+                el.textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+            }
+        }
+    </script>
+</body>
+
+</html>

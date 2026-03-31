@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>MedLive — Setup</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <style>
+    body {
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .ob-card {
+      background: var(--card);
+      border: 3px solid var(--border);
+      border-radius: var(--wobbly);
+      padding: 36px 28px 32px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      transform: rotate(-0.3deg);
+    }
+
+    .ob-card::before {
+      content: '';
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-2.5deg);
+      width: 72px;
+      height: 20px;
+      background: rgba(200, 200, 180, 0.5);
+      border-radius: 2px;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .progress-step {
+      flex: 1;
+      height: 6px;
+      background: var(--muted);
+      border-radius: 10px;
+      transition: background 0.3s;
+    }
+
+    .progress-step.done {
+      background: var(--secondary);
+    }
+
+    .progress-step.active {
+      background: var(--accent);
+    }
+
+    h2 {
+      font-family: var(--font-heading);
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+      transform: rotate(0.4deg);
+    }
+
+    .step-sub {
+      font-size: 1rem;
+      opacity: 0.65;
+      margin-bottom: 24px;
+    }
+
+    /* Step visibility */
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    /* ---- Step 0b: Family Link ---- */
+    .family-code-box {
+      background: var(--postit);
+      border: 3px solid var(--border);
+      border-radius: var(--wobbly-sm);
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      transform: rotate(-0.5deg);
+    }
+
+    .family-code-label {
+      font-size: 0.9rem;
+      opacity: 0.65;
+      margin-bottom: 8px;
+    }
+
+    .family-code-value {
+      font-family: var(--font-heading);
+      font-size: 3.2rem;
+      font-weight: 700;
+      letter-spacing: 12px;
+      color: var(--secondary);
+    }
+
+    .family-code-expiry {
+      font-size: 0.85rem;
+      opacity: 0.5;
+      margin-top: 8px;
+    }
+
+    .btn-generate-code {
+      width: 100%;
+      padding: 14px;
+      background: var(--card);
+      border: 3px solid var(--fg);
+      border-radius: var(--wobbly-btn);
+      font-family: var(--font-body);
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.1s;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-generate-code:hover {
+      background: var(--secondary);
+      color: white;
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    /* ---- Step 1: Language + Name ---- */
+    .lang-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .lang-btn {
+      padding: 18px 12px;
+      background: var(--card);
+      border: 3px solid var(--border);
+      border-radius: var(--wobbly-sm);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.1s;
+      text-align: center;
+    }
+
+    .lang-btn:nth-child(1) {
+      transform: rotate(-1deg);
+    }
+
+    .lang-btn:nth-child(2) {
+      transform: rotate(0.5deg);
+    }
+
+    .lang-btn:nth-child(3) {
+      transform: rotate(0.3deg);
+    }
+
+    .lang-btn:nth-child(4) {
+      transform: rotate(-0.7deg);
+    }
+
+    .lang-btn:hover {
+      background: var(--postit);
+      transform: translate(2px, 2px) rotate(1deg);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .lang-btn.selected {
+      border-color: var(--accent);
+      background: var(--postit);
+      box-shadow: var(--shadow-lg);
+      transform: rotate(0) scale(1.03);
+    }
+
+    .lang-flag {
+      font-size: 1.8rem;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .lang-name {
+      font-family: var(--font-heading);
+      font-weight: 700;
+    }
+
+    .lang-native {
+      font-size: 0.85rem;
+      opacity: 0.6;
+    }
+
+    .name-section {
+      margin-bottom: 8px;
+    }
+
+    .name-section label {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.05rem;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .name-section input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--wobbly-sm);
+      font-family: var(--font-body);
+      font-size: 1.1rem;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    .name-section input:focus {
+      outline: none;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(45, 93, 161, 0.12);
+    }
+
+    .name-section small {
+      font-size: 0.85rem;
+      opacity: 0.55;
+      display: block;
+      margin-top: 6px;
+    }
+
+    /* ---- Step 2: Avatar ---- */
+    .avatar-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .avatar-option {
+      padding: 20px 14px;
+      background: var(--card);
+      border: 3px solid var(--border);
+      border-radius: var(--wobbly-sm);
+      text-align: center;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.1s;
+    }
+
+    .avatar-option:nth-child(1) {
+      transform: rotate(-0.8deg);
+    }
+
+    .avatar-option:nth-child(2) {
+      transform: rotate(0.6deg);
+    }
+
+    .avatar-option:hover {
+      background: var(--postit);
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .avatar-option .material-icons {
+      font-size: 36px;
+      margin-bottom: 8px;
+      display: block;
+      color: var(--secondary);
+    }
+
+    .avatar-option-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .avatar-option-desc {
+      font-size: 0.85rem;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+
+    /* Avatar preview */
+    .avatar-preview-wrap {
+      display: none;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .avatar-preview-wrap.visible {
+      display: block;
+    }
+
+    .avatar-preview {
+      width: 160px;
+      height: 160px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+      transform: rotate(-1deg);
+    }
+
+    .avatar-preview-label {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      opacity: 0.65;
+    }
+
+    .generating-msg {
+      background: var(--postit);
+      border: 2px solid var(--border);
+      border-radius: var(--wobbly-sm);
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .generating-msg.visible {
+      display: block;
+    }
+
+    /* Hidden file input */
+    #photo-input {
+      display: none;
+    }
+
+    /* Bottom nav */
+    .ob-nav {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-back {
+      flex: 0 0 auto;
+      padding: 14px 20px;
+      background: var(--card);
+      border: 3px solid var(--fg);
+      border-radius: var(--wobbly-btn);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.1s;
+    }
+
+    .btn-back:hover {
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .btn-next {
+      flex: 1;
+      padding: 14px;
+      background: var(--card);
+      border: 3px solid var(--fg);
+      border-radius: var(--wobbly-btn);
+      font-family: var(--font-body);
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: all 0.1s;
+    }
+
+    .btn-next:hover:not(:disabled) {
+      background: var(--accent);
+      color: white;
+      transform: translate(2px, 2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .btn-next:active:not(:disabled) {
+      transform: translate(4px, 4px);
+      box-shadow: none;
+    }
+
+    .btn-next:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(0, 0, 0, 0.15);
+      border-top-color: var(--fg);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .ob-error {
+      background: #fff0f0;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      border-radius: var(--wobbly-sm);
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .ob-error.visible {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="ob-card">
+    <!-- Progress -->
+    <div class="progress-bar">
+      <div class="progress-step" id="ps0"></div>
+      <div class="progress-step" id="ps1"></div>
+      <div class="progress-step" id="ps2"></div>
+      <div class="progress-step" id="ps3"></div>
+      <div class="progress-step" id="ps4"></div>
+    </div>
+
+    <!-- Step 0b: Family Link -->
+    <div class="step active" id="step-0">
+      <h2>🔗 Family Link</h2>
+      <p class="step-sub">Share this code with a family member so they can follow your health.</p>
+
+      <div class="family-code-box" id="code-box">
+        <p class="family-code-label">Your link code</p>
+        <div class="family-code-value" id="code-display">— — — — —</div>
+        <p class="family-code-expiry" id="code-expiry">Generate a code below</p>
+      </div>
+
+      <button class="btn-generate-code" id="gen-code-btn" onclick="generateCode()">
+        <span class="material-icons" style="font-size:20px;">refresh</span>
+        Generate Code
+      </button>
+
+      <div class="ob-nav">
+        <button class="btn-next" id="skip-code-btn" onclick="goToStep(1)">
+          Skip for now →
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 1: Language + Companion Name -->
+    <div class="step" id="step-1">
+      <h2>🌐 Choose Language</h2>
+      <p class="step-sub">Your companion will speak in this language.</p>
+
+      <div class="lang-grid">
+        <button class="lang-btn" data-lang="English" onclick="selectLanguage(this)">
+          <span class="lang-flag">🇺🇸</span>
+          <span class="lang-name">English</span>
+          <span class="lang-native">English</span>
+        </button>
+        <button class="lang-btn" data-lang="Hindi" onclick="selectLanguage(this)">
+          <span class="lang-flag">🇮🇳</span>
+          <span class="lang-name">Hindi</span>
+          <span class="lang-native">हिंदी</span>
+        </button>
+        <button class="lang-btn" data-lang="Kannada" onclick="selectLanguage(this)">
+          <span class="lang-flag">🇮🇳</span>
+          <span class="lang-name">Kannada</span>
+          <span class="lang-native">ಕನ್ನಡ</span>
+        </button>
+        <button class="lang-btn" data-lang="Spanish" onclick="selectLanguage(this)">
+          <span class="lang-flag">🇲🇽</span>
+          <span class="lang-name">Spanish</span>
+          <span class="lang-native">Español</span>
+        </button>
+      </div>
+
+      <div class="name-section">
+        <label for="companion-name-input">What should we call your companion? ✍️</label>
+        <input type="text" id="companion-name-input" placeholder="e.g. Lingal, Dr. Priya, Rosa..."
+          oninput="onNameInput()">
+        <small>This name will be used throughout the app.</small>
+      </div>
+
+      <div class="ob-error" id="step1-error">Please choose a language and enter a companion name.</div>
+
+      <div class="ob-nav">
+        <button class="btn-back" onclick="goToStep(0)">← Back</button>
+        <button class="btn-next" id="next1-btn" onclick="nextFromStep1()">
+          Next → Voice
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Voice Selection -->
+    <div class="step" id="step-2">
+      <h2>🗣️ Choose a Voice</h2>
+      <p class="step-sub">Select how your companion will sound.</p>
+
+      <div class="lang-grid">
+        <button class="lang-btn voice-btn" data-voice="Aoede" onclick="selectVoice(this)">
+          <span class="lang-flag">👩</span>
+          <span class="lang-name">Aoede</span>
+          <span class="lang-native">Warm & Friendly</span>
+        </button>
+        <button class="lang-btn voice-btn" data-voice="Fenrir" onclick="selectVoice(this)">
+          <span class="lang-flag">👨</span>
+          <span class="lang-name">Fenrir</span>
+          <span class="lang-native">Deep & Professional</span>
+        </button>
+        <button class="lang-btn voice-btn" data-voice="Kore" onclick="selectVoice(this)">
+          <span class="lang-flag">👧</span>
+          <span class="lang-name">Kore</span>
+          <span class="lang-native">Bright & Energetic</span>
+        </button>
+        <button class="lang-btn voice-btn" data-voice="Charon" onclick="selectVoice(this)">
+          <span class="lang-flag">👴</span>
+          <span class="lang-name">Charon</span>
+          <span class="lang-native">Authoritative</span>
+        </button>
+      </div>
+
+      <div class="ob-error" id="step2-error">Please choose a voice.</div>
+
+      <div class="ob-nav">
+        <button class="btn-back" onclick="goToStep(1)">← Back</button>
+        <button class="btn-next" id="next2-btn" onclick="nextFromStep2()">
+          Next → Health Details
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: Health & Diet -->
+    <div class="step" id="step-3">
+      <h2>🥗 Health & Diet</h2>
+      <p class="step-sub">To provide safe recommendations, let us know about any restrictions.</p>
+
+      <div class="name-section">
+        <label for="diet-input">Dietary Preference (Optional)</label>
+        <input type="text" id="diet-input" placeholder="e.g. Vegetarian, Diabetic-friendly, Keto..."
+          oninput="onDietInput()">
+      </div>
+
+      <div class="name-section" style="margin-top:16px;">
+        <label for="allergies-input">Allergies (Optional)</label>
+        <input type="text" id="allergies-input" placeholder="e.g. Peanuts, Penicillin, Dust..."
+          oninput="onAllergiesInput()">
+        <small>Comma separated list.</small>
+      </div>
+
+      <div class="name-section" style="margin-top:16px;">
+        <label for="medications-input">Current Medications (Optional)</label>
+        <textarea id="medications-input" placeholder="e.g. Asprin 81mg every morning, Metformin 500mg twice a day..."
+          oninput="onMedicationsInput()" rows="3"
+          style="width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: var(--wobbly-sm); font-family: var(--font-body); font-size: 1.1rem; background: var(--bg); color: var(--fg); resize: vertical; margin-bottom: 24px;"></textarea>
+      </div>
+
+      <div class="ob-nav">
+        <button class="btn-back" onclick="goToStep(2)">← Back</button>
+        <button class="btn-next" id="next3-btn" onclick="nextFromStep3()">
+          Next → Choose Avatar
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Avatar -->
+    <div class="step" id="step-2">
+      <h2>🎨 Your Companion's Look</h2>
+      <p class="step-sub">Create a hand-drawn character for your companion.</p>
+
+      <div class="name-section" style="margin-bottom: 24px;">
+        <label for="avatar-desc-input">Describe their appearance (Optional)</label>
+        <textarea id="avatar-desc-input"
+          placeholder="e.g. A friendly old man wearing a green doctor's coat, A woman with curly hair and glasses..."
+          rows="2"
+          style="width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: var(--wobbly-sm); font-family: var(--font-body); font-size: 1rem; background: var(--bg); color: var(--fg); resize: vertical;"></textarea>
+      </div>
+
+      <div class="generating-msg" id="gen-msg">
+        <span class="spinner"></span> Generating avatar — this takes ~15 seconds...
+      </div>
+
+      <div class="avatar-preview-wrap" id="avatar-preview-wrap">
+        <img id="avatar-preview-img" class="avatar-preview" src="" alt="Generated avatar">
+        <p class="avatar-preview-label">Looking good! ✨ Continue when ready.</p>
+      </div>
+
+      <div class="avatar-options" id="avatar-options">
+        <div class="avatar-option" onclick="triggerPhotoUpload()">
+          <span class="material-icons">photo_camera</span>
+          <div class="avatar-option-title">Upload Photo</div>
+          <div class="avatar-option-desc">Transform your selfie into a character</div>
+        </div>
+        <div class="avatar-option" onclick="generateRandomAvatar()">
+          <span class="material-icons">auto_awesome</span>
+          <div class="avatar-option-title">Generate Avatar</div>
+          <div class="avatar-option-desc">AI draws a unique companion for you</div>
+        </div>
+      </div>
+
+      <input type="file" id="photo-input" accept="image/*" onchange="handlePhotoUpload(event)">
+
+      <div class="ob-error" id="step2-error"></div>
+
+      <div class="ob-nav">
+        <button class="btn-back" onclick="goToStep(1)">← Back</button>
+        <button class="btn-next" id="finish-btn" onclick="finishSetup()">
+          ✅ Finish Setup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <script>
+    // Auth guard — must be signed in
+    const uid = localStorage.getItem('medlive_uid');
+    const idToken = localStorage.getItem('medlive_id_token');
+    if (!uid || !idToken) {
+      window.location.href = '/static/auth.html';
+    }
+
+    // State
+    let currentStep = 0;
+    let selectedLanguage = '';
+    let companionName = '';
+    let generatedAvatarB64 = '';
+    let familyCode = '';
+
+    // -----------------------------------------------------------------------
+    // Step navigation
+    // -----------------------------------------------------------------------
+
+    function updateProgress() {
+      ['ps0', 'ps1', 'ps2'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        el.className = 'progress-step' +
+          (i < currentStep ? ' done' : i === currentStep ? ' active' : '');
+      });
+    }
+
+    function goToStep(n) {
+      document.querySelectorAll('.step').forEach((el, i) => {
+        el.classList.toggle('active', i === n);
+      });
+      currentStep = n;
+      updateProgress();
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 0b: Family Link Code
+    // -----------------------------------------------------------------------
+
+    async function generateCode() {
+      const btn = document.getElementById('gen-code-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Generating...';
+
+      try {
+        const resp = await fetch('/api/family/code/generate', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+
+        if (!resp.ok) throw new Error(await resp.text());
+        const data = await resp.json();
+        familyCode = data.code;
+
+        // Display
+        document.getElementById('code-display').textContent = familyCode.split('').join(' ');
+        const exp = new Date(data.expires_at);
+        document.getElementById('code-expiry').textContent =
+          `Expires at ${exp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · Share with family`;
+
+        // Change skip → next
+        document.getElementById('skip-code-btn').textContent = 'Next → Language';
+
+      } catch (err) {
+        console.error('Code generation failed:', err);
+        document.getElementById('code-display').textContent = 'Error';
+        document.getElementById('code-expiry').textContent = 'Please try again';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons" style="font-size:20px;">refresh</span> Regenerate';
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 1: Language + Name
+    // -----------------------------------------------------------------------
+
+    function selectLanguage(btn) {
+      document.querySelectorAll('.lang-btn:not(.voice-btn)').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedLanguage = btn.dataset.lang;
+      document.getElementById('step1-error').classList.remove('visible');
+    }
+
+    function onNameInput() {
+      companionName = document.getElementById('companion-name-input').value.trim();
+    }
+
+    function nextFromStep1() {
+      companionName = document.getElementById('companion-name-input').value.trim();
+      if (!selectedLanguage || !companionName) {
+        document.getElementById('step1-error').classList.add('visible');
+        return;
+      }
+      document.getElementById('step1-error').classList.remove('visible');
+      goToStep(2);
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 2: Voice
+    // -----------------------------------------------------------------------
+    let selectedVoice = '';
+
+    function selectVoice(btn) {
+      document.querySelectorAll('.voice-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedVoice = btn.dataset.voice;
+      document.getElementById('step2-error').classList.remove('visible');
+    }
+
+    function nextFromStep2() {
+      if (!selectedVoice) {
+        document.getElementById('step2-error').classList.add('visible');
+        return;
+      }
+      document.getElementById('step2-error').classList.remove('visible');
+      goToStep(3);
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 3: Health & Diet
+    // -----------------------------------------------------------------------
+    let dietaryPreference = '';
+    let allergies = '';
+    let currentMedications = '';
+
+    function onDietInput() {
+      dietaryPreference = document.getElementById('diet-input').value.trim();
+    }
+
+    function onAllergiesInput() {
+      allergies = document.getElementById('allergies-input').value.trim();
+    }
+
+    function onMedicationsInput() {
+      currentMedications = document.getElementById('medications-input').value.trim();
+    }
+
+    function nextFromStep3() {
+      goToStep(4);
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 4: Avatar Generation
+    // -----------------------------------------------------------------------
+
+    function triggerPhotoUpload() {
+      document.getElementById('photo-input').click();
+    }
+
+    async function handlePhotoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      await uploadAndGenerate(file);
+    }
+
+    async function generateRandomAvatar() {
+      await uploadAndGenerate(null);
+    }
+
+    async function uploadAndGenerate(photoFile) {
+      // Show generating indicator, hide options
+      document.getElementById('gen-msg').classList.add('visible');
+      document.getElementById('avatar-options').style.opacity = '0.4';
+      document.getElementById('avatar-options').style.pointerEvents = 'none';
+      document.getElementById('step2-error').classList.remove('visible'); // Actually step 4, but reuse
+      document.getElementById('finish-btn').disabled = true;
+
+      try {
+        const descInput = document.getElementById('avatar-desc-input').value.trim();
+        const formData = new FormData();
+        formData.append('companion_name', companionName || 'Health Companion');
+        if (descInput) {
+          formData.append('avatar_description', descInput);
+        }
+        if (photoFile) {
+          formData.append('photo', photoFile);
+        }
+
+        const resp = await fetch('/api/avatar/generate', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!resp.ok) {
+          const errText = await resp.text();
+          throw new Error(errText);
+        }
+
+        const data = await resp.json();
+        generatedAvatarB64 = data.avatar_b64;
+
+        // Show preview
+        const img = document.getElementById('avatar-preview-img');
+        img.src = generatedAvatarB64;
+        document.getElementById('avatar-preview-wrap').classList.add('visible');
+        document.getElementById('gen-msg').classList.remove('visible');
+        document.getElementById('finish-btn').disabled = false;
+
+      } catch (err) {
+        console.error('Avatar generation failed:', err);
+        document.getElementById('gen-msg').classList.remove('visible');
+        const errEl = document.getElementById('step2-error');
+        errEl.textContent = 'Avatar generation failed. You can still finish without a custom avatar.';
+        errEl.classList.add('visible');
+        document.getElementById('finish-btn').disabled = false;
+      } finally {
+        document.getElementById('avatar-options').style.opacity = '';
+        document.getElementById('avatar-options').style.pointerEvents = '';
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Finish: save profile → redirect
+    // -----------------------------------------------------------------------
+
+    async function finishSetup() {
+      const finBtn = document.getElementById('finish-btn');
+      finBtn.disabled = true;
+      finBtn.innerHTML = '<span class="spinner"></span> Saving...';
+
+      const profileData = {
+        language: selectedLanguage || 'English',
+        companion_name: companionName || 'Health Companion',
+        voice_name: selectedVoice || 'Aoede',
+        dietary_preference: dietaryPreference,
+        allergies: allergies,
+        current_medications: currentMedications
+      };
+
+      if (generatedAvatarB64) {
+        // Store only if reasonable size (<500KB as string)
+        if (generatedAvatarB64.length < 700000) {
+          profileData.avatar_b64 = generatedAvatarB64;
+        }
+      }
+
+      if (familyCode) {
+        profileData.family_link_code = familyCode;
+      }
+
+      try {
+        // Save to Firestore via backend
+        const resp = await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`
+          },
+          body: JSON.stringify(profileData)
+        });
+
+        if (!resp.ok) throw new Error(await resp.text());
+
+        // Store in localStorage for offline-first reads
+        localStorage.setItem('medlive_language', profileData.language);
+        localStorage.setItem('medlive_companion_name', profileData.companion_name);
+        if (generatedAvatarB64) localStorage.setItem('medlive_avatar', generatedAvatarB64);
+
+        window.location.href = '/';
+
+      } catch (err) {
+        console.error('Profile save failed:', err);
+        // Save locally and continue anyway (Firestore may be unavailable)
+        localStorage.setItem('medlive_language', profileData.language);
+        localStorage.setItem('medlive_companion_name', profileData.companion_name);
+        if (generatedAvatarB64) localStorage.setItem('medlive_avatar', generatedAvatarB64);
+        window.location.href = '/';
+      }
+    }
+
+    // Init progress indicator
+    updateProgress();
+  </script>
+</body>
+
+</html>

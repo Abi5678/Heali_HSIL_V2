@@ -1,0 +1,116 @@
+version: "3.9"
+
+# =============================================================================
+# MedLive Connect — Local Development Stack
+# =============================================================================
+# Usage:
+#   docker-compose up                # Start everything (full stack)
+#   docker-compose up app            # App only (no Firestore emulator)
+#   docker-compose down -v           # Tear down + clear Firestore emulator data
+#
+# Services:
+#   app        → http://localhost:8000  (FastAPI + React SPA, combined image)
+#   firestore  → localhost:8080         (Firestore emulator, no auth needed)
+#
+# For frontend hot-reload during development, skip docker-compose and run:
+#   Terminal 1:  uv run uvicorn app.main:app --port 8000 --reload
+#   Terminal 2:  npm run dev
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Firestore emulator (Firebase Emulator Suite)
+  # ---------------------------------------------------------------------------
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    command: >
+      bash -c "
+        apt-get install -y default-jre-headless &&
+        gcloud components install cloud-firestore-emulator beta --quiet &&
+        gcloud beta emulators firestore start
+          --host-port=0.0.0.0:8080
+          --project=medlive-local
+      "
+    ports:
+      - "8080:8080"   # Firestore gRPC
+      - "4000:4000"   # Emulator UI
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # MedLive Connect application (combined React + FastAPI image)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile   # Multi-stage: Node builds React, Python runs FastAPI
+    ports:
+      - "8000:8000"
+    environment:
+      # Firestore emulator
+      FIRESTORE_EMULATOR_HOST: "firestore:8080"
+      GOOGLE_CLOUD_PROJECT: "medlive-local"
+      GOOGLE_CLOUD_LOCATION: "us-central1"
+      # Use Gemini API key directly (not Vertex AI) for local dev
+      GOOGLE_GENAI_USE_VERTEXAI: "FALSE"
+      MEDLIVE_MODEL: "gemini-live-2.5-flash-native-audio"
+      USE_FIRESTORE: "true"
+      PORT: "8000"
+    env_file:
+      - .env   # Must contain: GOOGLE_API_KEY, GOOGLE_APPLICATION_CREDENTIALS
+    volumes:
+      # Mount credentials for local dev (never baked into the image)
+      - ./credentials:/app/credentials:ro
+    depends_on:
+      firestore:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s   # Longer: image build + uv sync on first run
+    restart: on-failure
+
+  # ---------------------------------------------------------------------------
+  # One-shot seed job — populates Firestore with demo patient data
+  # ---------------------------------------------------------------------------
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uv run python scripts/seed_firestore.py
+    environment:
+      FIRESTORE_EMULATOR_HOST: "firestore:8080"
+      GOOGLE_CLOUD_PROJECT: "medlive-local"
+      USE_FIRESTORE: "true"
+    env_file:
+      - .env
+    volumes:
+      - ./credentials:/app/credentials:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: "no"
+
+# =============================================================================
+# Quick start WITHOUT Docker:
+#
+#   cp .env.example .env
+#   # Edit .env: set GOOGLE_API_KEY, optionally set USE_FIRESTORE=false
+#   uv sync
+#   npm install
+#
+#   # Terminal 1 — FastAPI backend
+#   uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+#
+#   # Terminal 2 — Vite dev server (hot reload)
+#   npm run dev     # → http://localhost:8080
+#
+# The Vite dev server proxies API calls to localhost:8000 via CORS headers.
+# With USE_FIRESTORE=false the app uses in-memory mock data (no Firebase needed).
+# =============================================================================
