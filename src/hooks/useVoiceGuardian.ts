@@ -87,6 +87,13 @@ export function useVoiceGuardian(options: UseVoiceGuardianOptions = {}) {
   const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
   // Tracks the end-time of the last scheduled audio chunk for gapless sequential playback
   const nextPlayTimeRef = useRef<number>(0);
+  // Serial queue to ensure audio chunks are decoded and scheduled in order
+  const processingQueueRef = useRef<Promise<void>>(Promise.resolve());
+  // Monotonic ID incremented on interruption to invalidate stale queued chunks
+  const playbackIdRef = useRef<number>(0);
+  // Count of chunks currently in the processing queue
+  const pendingChunksCountRef = useRef<number>(0);
+
   // When true, the worklet onmessage drops audio frames instead of sending them.
   // Set while TTS text is processing so the mic stream doesn't interfere.
   const audioMutedRef = useRef<boolean>(false);
@@ -177,99 +184,110 @@ export function useVoiceGuardian(options: UseVoiceGuardianOptions = {}) {
       return;
     }
 
-    try {
-      // Parse sample rate from mimeType e.g. "audio/pcm;rate=24000"
-      // gemini-live-2.5-flash-native-audio outputs at 24kHz
-      const rateMatch = mimeType?.match(/rate=(\d+)/);
-      const outputSampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+    // Capture state synchronously for the serial queue
+    pendingChunksCountRef.current += 1;
+    const playbackId = playbackIdRef.current;
 
-      // Handle Interruption / New Turn: If nextPlayTimeRef is 0 we should stop any lingering audio chunks
-      if (nextPlayTimeRef.current === 0 && activeSourcesRef.current.length > 0) {
-        activeSourcesRef.current.forEach(source => {
-          try { source.stop(); } catch (e) { }
-        });
-        activeSourcesRef.current = [];
-      }
-
-      if (!playbackContextRef.current || playbackContextRef.current.state === "closed") {
-        playbackContextRef.current = new AudioContext({ sampleRate: outputSampleRate });
-        nextPlayTimeRef.current = 0;
-      }
-      const ctx = playbackContextRef.current;
-
-      // Resume AudioContext suspended by browser autoplay policy.
-      if (ctx.state === "suspended") {
-        await ctx.resume();
-      }
-
-      // Robust base64 decoding for binary data
-      // 1. Remove whitespace and handle URL-safe base64 characters
-      const cleaned = base64Audio.replace(/\s/g, "").replace(/-/g, "+").replace(/_/g, "/");
-
-      // 2. Strict validation: only proceed if it looks like valid base64
-      if (!/^[A-Za-z0-9+/=]{4,}$/.test(cleaned)) {
-        return;
-      }
-
-      let binaryString: string;
+    processingQueueRef.current = processingQueueRef.current.then(async () => {
       try {
-        binaryString = atob(cleaned);
-      } catch (e) {
-        // Silently skip if it still fails (protects the session)
-        return;
-      }
+        // Abort if the session was interrupted or reset while we were waiting in queue
+        if (playbackId !== playbackIdRef.current) return;
 
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
+        // Parse sample rate from mimeType e.g. "audio/pcm;rate=24000"
+        // gemini-live-2.5-flash-native-audio outputs at 24kHz
+        const rateMatch = mimeType?.match(/rate=(\d+)/);
+        const outputSampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
 
-      // Decode PCM bytes into an AudioBuffer
-      let audioBuffer: AudioBuffer;
-      if (!mimeType || mimeType.includes("pcm")) {
-        // Raw PCM: 16-bit signed little-endian → Float32
-        const int16 = new Int16Array(bytes.buffer);
-        audioBuffer = ctx.createBuffer(1, int16.length, outputSampleRate);
-        const channelData = audioBuffer.getChannelData(0);
-        for (let i = 0; i < int16.length; i++) {
-          channelData[i] = int16[i] / 32768;
+        // Handle Interruption / New Turn: If nextPlayTimeRef is 0 we should stop any lingering audio chunks
+        if (nextPlayTimeRef.current === 0 && activeSourcesRef.current.length > 0) {
+          activeSourcesRef.current.forEach(source => {
+            try { source.stop(); } catch (e) { }
+          });
+          activeSourcesRef.current = [];
         }
-      } else {
-        audioBuffer = await ctx.decodeAudioData(bytes.buffer.slice(0));
-      }
 
-      // CRITICAL FIX 2: Schedule each chunk to start right after the previous one.
-      // Without this, all chunks call start() at ctx.currentTime and stomp each other.
-      const startTime = Math.max(ctx.currentTime, nextPlayTimeRef.current);
-      nextPlayTimeRef.current = startTime + audioBuffer.duration;
+        if (!playbackContextRef.current || playbackContextRef.current.state === "closed") {
+          playbackContextRef.current = new AudioContext({ sampleRate: outputSampleRate });
+          nextPlayTimeRef.current = 0;
+        }
+        const ctx = playbackContextRef.current;
 
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      activeSourcesRef.current.push(source);
-      setIsSpeaking(true);
-      source.onended = () => {
-        activeSourcesRef.current = activeSourcesRef.current.filter(s => s !== source);
-        // Only act after the last scheduled chunk finishes
-        if (nextPlayTimeRef.current <= ctx.currentTime + 0.1) {
-          setIsSpeaking(false);
-          // Unmute mic now: turn is done AND all audio has finished playing.
-          // Waiting until here prevents the mic picking up speaker echo mid-playback.
-          if (turnCompleteReceivedRef.current) {
-            turnCompleteReceivedRef.current = false;
-            audioMutedRef.current = false;
-            nextPlayTimeRef.current = 0; // Reset scheduler now that audio is done
-            if (audioMuteTimerRef.current) {
-              clearTimeout(audioMuteTimerRef.current);
-              audioMuteTimerRef.current = null;
+        // Resume AudioContext suspended by browser autoplay policy.
+        if (ctx.state === "suspended") {
+          await ctx.resume();
+        }
+
+        // Robust base64 decoding for binary data
+        // 1. Remove whitespace and handle URL-safe base64 characters
+        const cleaned = base64Audio.replace(/\s/g, "").replace(/-/g, "+").replace(/_/g, "/");
+
+        // 2. Strict validation: only proceed if it looks like valid base64
+        if (!/^[A-Za-z0-9+/=]{4,}$/.test(cleaned)) {
+          return;
+        }
+
+        let binaryString: string;
+        try {
+          binaryString = atob(cleaned);
+        } catch (e) {
+          // Silently skip if it still fails (protects the session)
+          return;
+        }
+
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Decode PCM bytes into an AudioBuffer
+        let audioBuffer: AudioBuffer;
+        if (!mimeType || mimeType.includes("pcm")) {
+          // Raw PCM: 16-bit signed little-endian → Float32
+          const int16 = new Int16Array(bytes.buffer);
+          audioBuffer = ctx.createBuffer(1, int16.length, outputSampleRate);
+          const channelData = audioBuffer.getChannelData(0);
+          for (let i = 0; i < int16.length; i++) {
+            channelData[i] = int16[i] / 32768;
+          }
+        } else {
+          audioBuffer = await ctx.decodeAudioData(bytes.buffer.slice(0));
+        }
+
+        // CRITICAL FIX 2: Schedule each chunk to start right after the previous one.
+        // Without this, all chunks call start() at ctx.currentTime and stomp each other.
+        const startTime = Math.max(ctx.currentTime, nextPlayTimeRef.current);
+        nextPlayTimeRef.current = startTime + audioBuffer.duration;
+
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        activeSourcesRef.current.push(source);
+        setIsSpeaking(true);
+        source.onended = () => {
+          activeSourcesRef.current = activeSourcesRef.current.filter(s => s !== source);
+          // Only act after the last scheduled chunk finishes
+          if (nextPlayTimeRef.current <= ctx.currentTime + 0.1 && pendingChunksCountRef.current === 0) {
+            setIsSpeaking(false);
+            // Unmute mic now: turn is done AND all audio has finished playing.
+            // Waiting until here prevents the mic picking up speaker echo mid-playback.
+            if (turnCompleteReceivedRef.current) {
+              turnCompleteReceivedRef.current = false;
+              audioMutedRef.current = false;
+              nextPlayTimeRef.current = 0; // Reset scheduler now that audio is done
+              if (audioMuteTimerRef.current) {
+                clearTimeout(audioMuteTimerRef.current);
+                audioMuteTimerRef.current = null;
+              }
             }
           }
-        }
-      };
-      source.start(startTime);
-    } catch (err) {
-      console.warn("Failed to play audio response:", err);
-    }
+        };
+        source.start(startTime);
+      } catch (err) {
+        console.warn("Failed to play audio response:", err);
+      } finally {
+        pendingChunksCountRef.current = Math.max(0, pendingChunksCountRef.current - 1);
+      }
+    });
   }, []);
 
   // Handle incoming WebSocket messages (ADK LiveEvent format)
@@ -355,6 +373,8 @@ export function useVoiceGuardian(options: UseVoiceGuardianOptions = {}) {
       // 5.5 Interruption handling - if the backend explicitly warns us the turn was interrupted (barge-in)
       const isInterrupted = msg.interrupted === true;
       if (isInterrupted) {
+        playbackIdRef.current += 1;
+        processingQueueRef.current = Promise.resolve();
         if (activeSourcesRef.current.length > 0) {
           activeSourcesRef.current.forEach(source => {
             try { source.stop(); } catch (e) { }
@@ -374,7 +394,9 @@ export function useVoiceGuardian(options: UseVoiceGuardianOptions = {}) {
         // CRITICAL FIX: Do not immediately setIsSpeaking(false) or nextPlayTimeRef.current = 0.
         // If audio is still playing or scheduled, let source.onended handle the cleanup.
         const ctx = playbackContextRef.current;
-        const isStillPlaying = activeSourcesRef.current.length > 0 || (ctx && nextPlayTimeRef.current > ctx.currentTime + 0.1);
+        const isStillPlaying = activeSourcesRef.current.length > 0 ||
+          pendingChunksCountRef.current > 0 ||
+          (ctx && nextPlayTimeRef.current > ctx.currentTime + 0.1);
 
         if (isStillPlaying) {
           turnCompleteReceivedRef.current = true;
@@ -536,6 +558,9 @@ registerProcessor('pcm-processor', PCMProcessor);
 
     updateStatus("connecting");
 
+    playbackIdRef.current += 1;
+    processingQueueRef.current = Promise.resolve();
+
     // Pre-create AudioContext during user gesture so it starts in "running" state
     // (browsers suspend AudioContext created outside user interaction)
     if (!playbackContextRef.current || playbackContextRef.current.state === "closed") {
@@ -604,6 +629,8 @@ registerProcessor('pcm-processor', PCMProcessor);
     }
     wsRef.current = null;
     stopMicrophone();
+    playbackIdRef.current += 1;
+    processingQueueRef.current = Promise.resolve();
     if (playbackContextRef.current && playbackContextRef.current.state !== "closed") {
       playbackContextRef.current.close();
       playbackContextRef.current = null;
