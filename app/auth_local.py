@@ -11,6 +11,7 @@ Tokens are HS256 JWTs signed with JWT_SECRET env var, valid for 30 days.
 """
 
 import os
+import secrets
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -23,7 +24,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 _USERS_DB = Path(os.getenv("SQLITE_USERS_DB", "data/users.db"))
-_JWT_SECRET = os.getenv("JWT_SECRET", "change-me-local-dev-secret")
+_JWT_SECRET = os.getenv("JWT_SECRET")
+if not _JWT_SECRET:
+    # Fallback for local development: generate a random secret if not provided in environment.
+    # This prevents using a hardcoded, publicly known secret.
+    _JWT_SECRET = secrets.token_urlsafe(32)
+
 _JWT_ALGORITHM = "HS256"
 _TOKEN_EXPIRY_DAYS = 30
 
