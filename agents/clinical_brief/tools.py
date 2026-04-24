@@ -36,20 +36,32 @@ async def generate_clinical_brief(user_id: str, days: int = 7) -> dict:
 
     fs = FirestoreService.get_instance()
 
-    # Sequential data fetch (SQLite's aiosqlite does not support parallel connections)
-    profile = await fs.get_patient_profile(user_id)
-    medications = await fs.get_medications(user_id)
-    adherence = await fs.get_adherence_log(user_id, since_date=since)
-    vitals = await fs.get_vitals_log(user_id, since_date=since)
-    food_logs = await fs.get_food_logs(user_id)
-    prescriptions = await fs.get_prescriptions(user_id)
-    reports = await fs.get_reports(user_id)
-    safety_logs = await fs.get_safety_logs(user_id, since_date=since)
-    incidents = await fs.get_emergency_incidents(user_id, since_date=since)
-    symptoms = await fs.get_symptoms(user_id, since_date=since)
-
-    # Fetch wearable data
-    wearable_connections = await fs.get_wearable_connections(user_id)
+    # Parallel data fetch to improve performance
+    (
+        profile,
+        medications,
+        adherence,
+        vitals,
+        food_logs,
+        prescriptions,
+        reports,
+        safety_logs,
+        incidents,
+        symptoms,
+        wearable_connections,
+    ) = await asyncio.gather(
+        fs.get_patient_profile(user_id),
+        fs.get_medications(user_id),
+        fs.get_adherence_log(user_id, since_date=since),
+        fs.get_vitals_log(user_id, since_date=since),
+        fs.get_food_logs(user_id),
+        fs.get_prescriptions(user_id),
+        fs.get_reports(user_id),
+        fs.get_safety_logs(user_id, since_date=since),
+        fs.get_emergency_incidents(user_id, since_date=since),
+        fs.get_symptoms(user_id, since_date=since),
+        fs.get_wearable_connections(user_id),
+    )
 
     # Use mock data fallbacks if empty
     profile = profile or PATIENT_PROFILE
