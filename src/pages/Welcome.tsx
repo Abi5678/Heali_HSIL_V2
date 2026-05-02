@@ -16,6 +16,7 @@ import {
   Languages,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import CallingScreen from "@/components/CallingScreen";
 import { useAuth } from "@/contexts/AuthContext";
 import { getProfile } from "@/lib/api";
 
@@ -32,10 +33,32 @@ const FEATURES = [
   { to: "/profile", icon: User, label: "Profile", description: "Settings and preferences" },
 ];
 
+interface ReminderCall {
+  facetimeUrl: string;
+  contactName: string;
+  reminderType: string;
+}
+
 const Welcome = () => {
   const navigate = useNavigate();
   const { user, getIdToken } = useAuth();
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [reminderCall, setReminderCall] = useState<ReminderCall | null>(null);
+
+  // Detect ?call=reminder URL params injected by the service worker on push notification tap
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("call") === "reminder") {
+      const facetimeUrl = params.get("facetime_url");
+      const contactName = params.get("contact_name") || "Family";
+      const reminderType = params.get("reminder_type") || "reminder";
+      if (facetimeUrl) {
+        setReminderCall({ facetimeUrl, contactName, reminderType });
+        // Clean up URL without a page reload
+        window.history.replaceState({}, "", "/");
+      }
+    }
+  }, []);
 
   // Fetch Firestore profile name so it matches the Profile page
   useEffect(() => {
@@ -61,8 +84,27 @@ const Welcome = () => {
   // Priority: Firestore profile name → Firebase Auth displayName → email prefix
   const displayName = profileName || user?.displayName || user?.email?.split("@")[0] || "there";
 
+  const reminderLabel = reminderCall?.reminderType === "meds"
+    ? "Time to take your medication"
+    : reminderCall?.reminderType
+      ? `Time for your ${reminderCall.reminderType}`
+      : "Reminder from Heali";
+
   return (
     <AppLayout>
+      {/* Reminder Calling Screen — shown when app opens from a push notification */}
+      {reminderCall && (
+        <CallingScreen
+          type="reminder"
+          primaryContact={{
+            name: reminderCall.contactName,
+            phone: reminderCall.facetimeUrl.replace("facetime-audio://", "").replace("facetime://", ""),
+            relationship: "Family",
+          }}
+          message={reminderLabel}
+          onDismiss={() => setReminderCall(null)}
+        />
+      )}
       <div className="mb-12">
         <h1 className="font-display text-5xl font-bold tracking-tight text-foreground lg:text-7xl">
           {greeting()},

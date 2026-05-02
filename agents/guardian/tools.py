@@ -898,7 +898,7 @@ def initiate_emergency_protocol(
         safety_log = _build_safety_log(tier, symptom_description, severity, recent_vitals, notified, now)
         _persist_safety_log(user_id, safety_log, tool_context)
 
-        # Emit UI event
+        # Emit safety alert UI event
         emit_ui_update("safety_alert", {
             "tier": "red",
             "symptom": symptom_description,
@@ -906,6 +906,43 @@ def initiate_emergency_protocol(
             "timestamp": now,
             "log": safety_log,
         }, tool_context)
+
+        # Emit calling_screen event — shows full-screen calling UI with both
+        # the emergency contact and primary care doctor simultaneously
+        try:
+            if _use_firestore(tool_context):
+                _profile = _run_async(FirestoreService.get_instance().get_patient_profile(user_id)) or PATIENT_PROFILE
+            else:
+                _profile = PATIENT_PROFILE
+            _ec = _profile.get("emergency_contact", [])
+            _ec_entry = (_ec[0] if isinstance(_ec, list) and _ec else _ec) if _ec else {}
+            _ec_phone = _ec_entry.get("phone", "") if _ec_entry else ""
+            _ec_name = _ec_entry.get("name", "Emergency Contact") if _ec_entry else "Emergency Contact"
+            _ec_rel = _ec_entry.get("relationship", "Emergency Contact") if _ec_entry else "Emergency Contact"
+            _pc = _profile.get("primary_care", {})
+            _pc_phone = _pc.get("phone", "") if _pc else ""
+            _pc_name = _pc.get("name", "Primary Care Doctor") if _pc else "Primary Care Doctor"
+            _pc_specialty = _pc.get("specialty", "Doctor") if _pc else "Doctor"
+            _calling_data: dict = {
+                "type": "emergency",
+                "message": f"Emergency: {symptom_description}. Heali is alerting your contacts now.",
+                "primary_contact": {
+                    "name": _ec_name,
+                    "phone": _ec_phone,
+                    "relationship": _ec_rel,
+                    "facetime_url": f"facetime-audio://{_ec_phone}" if _ec_phone else "",
+                },
+            }
+            if _pc_phone:
+                _calling_data["secondary_contact"] = {
+                    "name": _pc_name,
+                    "phone": _pc_phone,
+                    "relationship": _pc_specialty,
+                    "facetime_url": f"facetime-audio://{_pc_phone}",
+                }
+            emit_ui_update("calling_screen", _calling_data, tool_context)
+        except Exception:
+            pass  # Non-critical — do not block emergency protocol
 
         return {
             "action": "call_emergency",

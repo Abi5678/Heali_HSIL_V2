@@ -8,6 +8,8 @@ import {
   Languages,
 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
+import CallingScreen from "@/components/CallingScreen";
+import type { CallingScreenProps } from "@/components/CallingScreen";
 import { useVoiceGuardian } from "@/hooks/useVoiceGuardian";
 import { LANGUAGE_PERSONAS } from "@/lib/voiceConfig";
 import { useAuth } from "@/contexts/AuthContext";
@@ -315,7 +317,7 @@ const VoiceGuardian = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [uiEvents, setUIEvents] = useState<UIEvent[]>([]);
   const [scanningFood, setScanningFood] = useState(false);
-  const [sosAlert, setSosAlert] = useState<{ contactName: string; facetimeUrl: string; message: string } | null>(null);
+  const [callingScreen, setCallingScreen] = useState<Omit<CallingScreenProps, "onDismiss"> | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
@@ -540,11 +542,36 @@ const VoiceGuardian = () => {
           </span>
         ) as unknown as string,
       });
-    } else if (event.target === "sos_facetime") {
+    } else if (event.target === "calling_screen") {
       const d = (event.data ?? {}) as Record<string, unknown>;
-      setSosAlert({
-        contactName: String(d.contact_name ?? "Emergency Contact"),
-        facetimeUrl: String(d.facetime_url ?? ""),
+      const pc = (d.primary_contact ?? {}) as Record<string, unknown>;
+      const sc = (d.secondary_contact ?? null) as Record<string, unknown> | null;
+      setCallingScreen({
+        type: (d.type as "reminder" | "emergency") ?? "emergency",
+        primaryContact: {
+          name: String(pc.name ?? "Emergency Contact"),
+          phone: String(pc.phone ?? ""),
+          relationship: pc.relationship ? String(pc.relationship) : undefined,
+        },
+        secondaryContact: sc
+          ? {
+              name: String(sc.name ?? ""),
+              phone: String(sc.phone ?? ""),
+              relationship: sc.relationship ? String(sc.relationship) : undefined,
+            }
+          : undefined,
+        message: String(d.message ?? "Emergency alert triggered"),
+      });
+    } else if (event.target === "sos_facetime") {
+      // Legacy fallback — maps single-contact sos_facetime to CallingScreen
+      const d = (event.data ?? {}) as Record<string, unknown>;
+      setCallingScreen({
+        type: "emergency",
+        primaryContact: {
+          name: String(d.contact_name ?? "Emergency Contact"),
+          phone: String(d.facetime_url ?? "").replace("facetime-audio://", "").replace("facetime://", ""),
+          relationship: "Emergency Contact",
+        },
         message: String(d.message ?? "Emergency alert triggered"),
       });
     } else if (event.target === "family_alert") {
@@ -657,30 +684,12 @@ const VoiceGuardian = () => {
 
   return (
     <AppLayout>
-      {/* SOS FaceTime Overlay */}
-      {sosAlert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl border-2 border-destructive bg-card p-8 text-center shadow-2xl">
-            <div className="mb-4 text-6xl">🚨</div>
-            <h2 className="mb-2 font-display text-2xl font-bold text-destructive">Emergency Alert</h2>
-            <p className="mb-6 text-sm text-muted-foreground">{sosAlert.message}</p>
-            {sosAlert.facetimeUrl && (
-              <a
-                href={sosAlert.facetimeUrl}
-                onClick={() => setSosAlert(null)}
-                className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-4 font-display text-lg font-bold text-white shadow-lg hover:bg-green-600"
-              >
-                📞 FaceTime {sosAlert.contactName}
-              </a>
-            )}
-            <button
-              onClick={() => setSosAlert(null)}
-              className="mt-2 w-full rounded-lg border border-border py-2 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:bg-secondary"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
+      {/* Calling Screen Overlay (reminders + emergency alerts) */}
+      {callingScreen && (
+        <CallingScreen
+          {...callingScreen}
+          onDismiss={() => setCallingScreen(null)}
+        />
       )}
 
       <div className="mb-12">

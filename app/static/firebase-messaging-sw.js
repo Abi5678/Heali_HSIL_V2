@@ -29,16 +29,30 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/";
+  const data = event.notification.data || {};
+  let targetUrl = data.url || "/";
+
+  // If the notification carries FaceTime/calling data, append params so the
+  // app can show the CallingScreen overlay when it opens.
+  if (data.facetime_url) {
+    const sep = targetUrl.includes("?") ? "&" : "?";
+    targetUrl +=
+      sep +
+      "call=reminder" +
+      "&facetime_url=" + encodeURIComponent(data.facetime_url) +
+      "&contact_name=" + encodeURIComponent(data.contact_name || "Family") +
+      "&reminder_type=" + encodeURIComponent(data.reminder_type || "reminder");
+  }
+
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.indexOf(self.location.origin) === 0 && "focus" in client) {
-          client.navigate(url);
+          client.navigate(targetUrl);
           return client.focus();
         }
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url);
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });

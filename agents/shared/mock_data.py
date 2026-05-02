@@ -18,6 +18,11 @@ PATIENT_PROFILE = {
             "phone": "+1-555-0456",
         },
     ],
+    "primary_care": {
+        "name": "Dr. Priya Patel",
+        "phone": "+1-555-0789",
+        "specialty": "General Practitioner",
+    },
 }
 
 MEDICATIONS = [

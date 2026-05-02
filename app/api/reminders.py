@@ -193,7 +193,9 @@ async def trigger_reminders(
         patient_phone = sub.get("phone_number") or ""
         # FaceTime URL for the emergency contact (used in notification payload)
         ec = sub.get("emergency_contact") or {}
-        ec_phone = (ec[0].get("phone", "") if isinstance(ec, list) and ec else ec.get("phone", "")) if ec else ""
+        ec_entry = (ec[0] if isinstance(ec, list) and ec else ec) if ec else {}
+        ec_phone = ec_entry.get("phone", "") if ec_entry else ""
+        ec_name = ec_entry.get("name", "Family") if ec_entry else "Family"
         facetime_url = f"facetime-audio://{ec_phone}" if ec_phone else ""
 
         # Meds: distinct medication times that fall in current 15-min window
@@ -209,7 +211,11 @@ async def trigger_reminders(
                 if mt == slot_str:
                     if fcm_token:
                         try:
-                            data = {"url": f"{app_url}/?checkin=true&type=meds"}
+                            data = {
+                                "url": f"{app_url}/?checkin=true&type=meds",
+                                "reminder_type": "meds",
+                                "contact_name": ec_name,
+                            }
                             if facetime_url:
                                 data["facetime_url"] = facetime_url
                             msg = fb_messaging.Message(
@@ -236,7 +242,11 @@ async def trigger_reminders(
                 if r_time == slot_str:
                     if fcm_token:
                         try:
-                            data = {"url": f"{app_url}/?checkin=true&type={type_label}"}
+                            data = {
+                                "url": f"{app_url}/?checkin=true&type={type_label}",
+                                "reminder_type": type_label,
+                                "contact_name": ec_name,
+                            }
                             if facetime_url:
                                 data["facetime_url"] = facetime_url
                             msg = fb_messaging.Message(
