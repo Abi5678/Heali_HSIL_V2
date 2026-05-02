@@ -162,6 +162,7 @@ from app.api.medications import router as medications_router
 from app.api.alerts import router as alerts_router
 from app.api.clinical_brief import router as clinical_brief_router
 from app.api.wearables import router as wearables_router
+from app.api.voice_call import router as voice_call_router
 
 app.include_router(avatar_router)
 app.include_router(family_router)
@@ -173,6 +174,7 @@ app.include_router(medications_router)
 app.include_router(alerts_router)
 app.include_router(clinical_brief_router)
 app.include_router(wearables_router)
+app.include_router(voice_call_router)
 
 # Session service (will upgrade to Firestore-backed in Phase 3)
 session_service = InMemorySessionService()

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Bell, 
-  Phone, 
-  Clock, 
-  Pill, 
-  Utensils, 
+import {
+  Bell,
+  Phone,
+  Clock,
+  Pill,
+  Utensils,
   Droplets,
   ChevronLeft,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  PhoneCall,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -68,7 +69,7 @@ const Reminders = () => {
     if (!prefs.voice_reminders_enabled || !prefs.phone_number) {
       toast({
         title: "Setup Required",
-        description: "Please enable FaceTime reminders and enter your phone number first.",
+        description: "Please enable voice reminders and enter your phone number first.",
         variant: "destructive",
       });
       return;
@@ -88,24 +89,51 @@ const Reminders = () => {
       if (response.ok) {
         const data = await response.json();
         const facetimeUrl = data.facetime_url || `facetime-audio://${prefs.phone_number}`;
-        // Open FaceTime immediately on Apple devices
         window.open(facetimeUrl, '_blank');
         toast({
           title: "Opening FaceTime...",
-          description: `Starting a FaceTime call to ${prefs.phone_number}. If it didn't open, tap: ${facetimeUrl}`,
+          description: `Starting a FaceTime call to ${prefs.phone_number}.`,
         });
       } else {
         const err = await response.json();
         throw new Error(err.detail || "Failed to initiate FaceTime");
       }
     } catch (error: any) {
-      toast({
-        title: "FaceTime Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "FaceTime Failed", description: (error as Error).message, variant: "destructive" });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const [callingDemo, setCallingDemo] = useState(false);
+  const handleTestVoiceCall = async () => {
+    setCallingDemo(true);
+    try {
+      const token = await getIdToken();
+      const response = await fetch('/api/reminders/test-voice-call', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token ?? "demo"}` },
+      });
+      const data = await response.json();
+
+      if (data.demo) {
+        // No Twilio credentials — show what the call would say
+        toast({
+          title: "Demo Mode — No Twilio configured",
+          description: `Would call ${data.would_call}: "${data.script?.slice(0, 80)}…"`,
+        });
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else {
+        toast({
+          title: "📞 Calling now!",
+          description: `Heali is calling ${data.to ?? "the demo number"}. Answer to hear the reminder.`,
+        });
+      }
+    } catch (error: any) {
+      toast({ title: "Voice Call Failed", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setCallingDemo(false);
     }
   };
 
@@ -170,8 +198,8 @@ const Reminders = () => {
               <Phone size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Voice Notifications</h2>
-              <p className="text-sm text-muted-foreground italic">Heali will call you when it's time.</p>
+              <h2 className="text-lg font-semibold">Voice Call Reminders</h2>
+              <p className="text-sm text-muted-foreground italic">Heali calls your phone — you just answer.</p>
             </div>
           </div>
 
@@ -179,45 +207,59 @@ const Reminders = () => {
             <CardContent className="pt-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <Label className="text-base">Enable FaceTime Reminders</Label>
-                  <p className="text-sm text-muted-foreground">Get FaceTime calls from your emergency contact for critical reminder slots.</p>
+                  <Label className="text-base">Enable Voice Call Reminders</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Heali will call your phone at medication time. Press 1 when taken, 2 to snooze 15 min.
+                  </p>
                 </div>
-                <Switch 
-                  checked={prefs.voice_reminders_enabled} 
+                <Switch
+                  checked={prefs.voice_reminders_enabled}
                   onCheckedChange={() => handleToggle('voice_reminders_enabled')}
                 />
               </div>
 
               {prefs.voice_reminders_enabled && (
                 <div className="space-y-3 pt-4 border-t animate-in fade-in slide-in-from-top-2 duration-300">
-                  <Label htmlFor="phone">Your Phone Number / Apple ID</Label>
+                  <Label htmlFor="phone">Your Phone Number</Label>
                   <Input
                     id="phone"
-                    placeholder="+1 234 567 8900 or email@icloud.com"
+                    placeholder="+1 234 567 8900"
                     value={prefs.phone_number}
                     onChange={(e) => setPrefs(prev => ({ ...prev, phone_number: e.target.value }))}
                     className="bg-muted/30"
                   />
-                  <p className="text-xs text-muted-foreground">Used to FaceTime you for reminders. Works on iPhone, iPad, and Mac.</p>
-                </div>
-              )}
-
-              {prefs.voice_reminders_enabled && (
-                <div className="pt-4 flex flex-col gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full gap-2 border-primary/30 hover:bg-primary/5"
-                    onClick={handleTestCall}
-                    disabled={testing || !prefs.phone_number}
-                  >
-                    <Phone className={`h-4 w-4 ${testing ? 'animate-bounce' : ''}`} />
-                    {testing ? 'Opening FaceTime...' : 'Test FaceTime Call'}
-                  </Button>
-                  <p className="text-[10px] text-center text-muted-foreground">
-                    Opens a FaceTime call to your number to verify it works on your Apple device.
+                  <p className="text-xs text-muted-foreground">
+                    Heali will call this number. Works on any phone — no app needed.
                   </p>
                 </div>
               )}
+
+              {/* Demo voice call button — always visible for testing */}
+              <div className="pt-4 border-t flex flex-col gap-3">
+                <Button
+                  className="w-full gap-2 bg-primary hover:bg-primary/90"
+                  onClick={handleTestVoiceCall}
+                  disabled={callingDemo}
+                >
+                  <PhoneCall className={`h-4 w-4 ${callingDemo ? 'animate-bounce' : ''}`} />
+                  {callingDemo ? 'Calling…' : '📞 Test Heali Voice Call (Demo)'}
+                </Button>
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Calls the demo number. Set <code>TWILIO_DEMO_PHONE</code> in .env to use your real phone.
+                </p>
+
+                {prefs.voice_reminders_enabled && prefs.phone_number && (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-primary/30 hover:bg-primary/5"
+                    onClick={handleTestCall}
+                    disabled={testing}
+                  >
+                    <Phone className={`h-4 w-4 ${testing ? 'animate-bounce' : ''}`} />
+                    {testing ? 'Opening FaceTime…' : 'Test FaceTime (Apple devices)'}
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </section>

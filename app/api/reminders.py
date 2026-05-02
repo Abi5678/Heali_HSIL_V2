@@ -190,7 +190,9 @@ async def trigger_reminders(
             continue
 
         patient_name = sub.get("name") or "there"
+        patient_first_name = patient_name.split()[0]
         patient_phone = sub.get("phone_number") or ""
+        voice_enabled = sub.get("voice_reminders_enabled", False)
         # FaceTime URL for the emergency contact (used in notification payload)
         ec = sub.get("emergency_contact") or {}
         ec_entry = (ec[0] if isinstance(ec, list) and ec else ec) if ec else {}
@@ -209,6 +211,19 @@ async def trigger_reminders(
             for mt in med_times:
                 if len(mt) == 4: mt = "0" + mt
                 if mt == slot_str:
+                    # ── Voice call reminder (primary channel) ──────────────
+                    if voice_enabled and patient_phone:
+                        try:
+                            from app.api.voice_call import (
+                                build_medication_list,
+                                place_reminder_call,
+                            )
+                            med_names = build_medication_list(meds)
+                            place_reminder_call(patient_phone, patient_first_name, med_names)
+                            sent += 1
+                        except Exception:
+                            pass
+                    # ── FCM push (fallback / additional channel) ───────────
                     if fcm_token:
                         try:
                             data = {
@@ -224,8 +239,10 @@ async def trigger_reminders(
                                 token=fcm_token,
                             )
                             fb_messaging.send(msg)
-                            sent += 1
-                        except Exception: pass
+                            if not voice_enabled:
+                                sent += 1
+                        except Exception:
+                            pass
                     break
 
         # Other Slot-based reminders
