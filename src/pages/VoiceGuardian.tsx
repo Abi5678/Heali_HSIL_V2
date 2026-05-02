@@ -254,6 +254,49 @@ function renderUICard(event: UIEvent, index: number) {
     );
   }
 
+  if (target === "safety_alert") {
+    const d = (event.data ?? {}) as Record<string, unknown>;
+    const tier = String(d.tier ?? "green");
+    const symptom = String(d.symptom ?? "Safety check logged");
+    const emergencyNumber = String(d.emergency_number ?? "911");
+    const isRed = tier === "red";
+    const isAmber = tier === "amber";
+    return (
+      <motion.div
+        key={`ui-${index}`}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={`flex items-start gap-3 rounded-lg border p-4 ${
+          isRed
+            ? "border-red-500/40 bg-red-500/10"
+            : isAmber
+            ? "border-amber-500/40 bg-amber-500/10"
+            : "border-green-500/30 bg-green-500/10"
+        }`}
+      >
+        <ShieldAlert
+          size={20}
+          className={`mt-0.5 shrink-0 ${
+            isRed ? "text-red-500" : isAmber ? "text-amber-500" : "text-green-500"
+          }`}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            {isRed ? "🚨 Emergency Alert" : isAmber ? "⚠️ Health Alert" : "✓ Safety Check"}
+          </p>
+          <p className="mt-0.5 text-sm font-medium line-clamp-2">{symptom}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {isRed
+              ? `Call ${emergencyNumber} · Family & doctor alerted`
+              : isAmber
+              ? "Family notified · Monitor closely"
+              : "Logged for monitoring"}
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
+
   // Default card for unknown events
   return (
     <motion.div
@@ -574,6 +617,30 @@ const VoiceGuardian = () => {
         },
         message: String(d.message ?? "Emergency alert triggered"),
       });
+    } else if (event.target === "safety_alert") {
+      // For RED tier alerts: show the full-screen CallingScreen overlay.
+      // Contact info is embedded in the event by the backend so this works
+      // even when the separate calling_screen event silently fails.
+      const d = (event.data ?? {}) as Record<string, unknown>;
+      const tier = String(d.tier ?? "");
+      const pc = (d.primary_contact ?? null) as Record<string, unknown> | null;
+      if (tier === "red" && pc && pc.phone) {
+        const sc = (d.secondary_contact ?? null) as Record<string, unknown> | null;
+        setCallingScreen({
+          type: "emergency",
+          primaryContact: {
+            name: String(pc.name ?? "Emergency Contact"),
+            phone: String(pc.phone ?? ""),
+            relationship: pc.relationship ? String(pc.relationship) : "Emergency Contact",
+          },
+          secondaryContact: sc?.phone ? {
+            name: String(sc.name ?? ""),
+            phone: String(sc.phone ?? ""),
+            relationship: sc.relationship ? String(sc.relationship) : "Doctor",
+          } : undefined,
+          message: `Emergency: ${String(d.symptom ?? "")}. Heali is alerting your contacts.`,
+        });
+      }
     } else if (event.target === "family_alert") {
       const d = (event.data ?? {}) as Record<string, unknown>;
       const name = String(d.contact_name ?? "family");
