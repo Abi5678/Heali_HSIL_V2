@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heali - Your AI Health Bestie | Voice-First Health Companion</title>
+<meta name="description" content="Heali is a voice-first, multilingual AI health companion. Manage medications, track vitals, connect with family caregivers, and more — all through natural conversation.">
+<meta property="og:title" content="Heali - Your AI Health Bestie">
+<meta property="og:description" content="A voice-first AI that manages your health in the language you speak.">
+<meta property="og:image" content="heali-logo.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Source+Serif+4:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0F1923;--bg-card:rgba(26,39,54,0.6);--teal:#7DD3C0;--teal-dim:#5fb8a4;
+  --coral:#F4A896;--coral-dark:#E8927E;--text:#F0F4F8;--text-muted:#8899AA;
+  --border:rgba(125,211,192,0.15);--border-solid:#2A3A4A;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Source Serif 4',Georgia,serif;background:var(--bg);color:var(--text);overflow-x:hidden;line-height:1.6}
+h1,h2,h3,h4{font-family:'Playfair Display',serif;font-weight:700}
+a{color:var(--teal);text-decoration:none}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(15,25,35,0.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-solid);transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 4px 30px rgba(0,0,0,0.4)}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo img{height:36px}
+.nav-logo span{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--teal)}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{color:var(--text-muted);font-size:.9rem;transition:color .2s}
+.nav-links a:hover,.nav-links a.active{color:var(--teal)}
+.nav-cta{background:linear-gradient(135deg,var(--teal),var(--teal-dim));color:var(--bg);padding:8px 20px;border-radius:24px;font-weight:600;font-size:.85rem;transition:transform .2s,box-shadow .2s;border:none;cursor:pointer}
+.nav-cta:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(125,211,192,0.3)}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px}
+.hamburger svg{width:28px;height:28px;stroke:var(--text);stroke-width:2}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;background:rgba(15,25,35,0.95);backdrop-filter:blur(16px);padding:20px 24px;border-bottom:1px solid var(--border-solid)}
+.mobile-menu.open{display:block}
+.mobile-menu a{display:block;padding:12px 0;color:var(--text-muted);font-size:1rem;border-bottom:1px solid var(--border-solid)}
+.mobile-menu a:last-child{border:none}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;padding-top:64px}
+.hero-bg{position:absolute;inset:0;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35;animation:float 18s ease-in-out infinite}
+.orb-teal{width:500px;height:500px;background:radial-gradient(circle,var(--teal),transparent 70%);top:-10%;right:-5%;animation-delay:-3s}
+.orb-coral{width:400px;height:400px;background:radial-gradient(circle,var(--coral),transparent 70%);bottom:-10%;left:-5%;animation-delay:-8s}
+.orb-small{width:250px;height:250px;background:radial-gradient(circle,var(--teal),transparent 70%);top:40%;left:30%;opacity:.2;animation-delay:-12s}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(40px,-30px) scale(1.05)}50%{transform:translate(-20px,40px) scale(.95)}75%{transform:translate(30px,20px) scale(1.02)}}
+.hero-content{position:relative;z-index:2;max-width:700px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(125,211,192,0.1);border:1px solid var(--border);border-radius:24px;padding:6px 16px;font-size:.8rem;color:var(--teal);margin-bottom:24px}
+.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:pulse-dot 2s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.hero h1{font-size:clamp(2.2rem,5vw,3.8rem);line-height:1.15;margin-bottom:20px}
+.hero h1 .grad{background:linear-gradient(135deg,var(--teal),var(--coral));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.15rem;color:var(--text-muted);margin-bottom:32px;max-width:560px}
+.hero-btns{display:flex;gap:16px;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--teal-dim));color:var(--bg);padding:14px 32px;border-radius:28px;font-weight:600;font-size:1rem;transition:all .3s;border:none;cursor:pointer;font-family:inherit}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(125,211,192,0.3)}
+.btn-secondary{background:transparent;color:var(--teal);padding:14px 32px;border-radius:28px;font-weight:600;font-size:1rem;border:1px solid var(--border);cursor:pointer;transition:all .3s;font-family:inherit}
+.btn-secondary:hover{background:rgba(125,211,192,0.08);border-color:var(--teal)}
+.hero-visual{position:absolute;right:-40px;top:50%;transform:translateY(-50%);z-index:1;opacity:.15;pointer-events:none}
+.voice-rings{position:relative;width:300px;height:300px}
+.voice-ring{position:absolute;inset:0;border:2px solid var(--teal);border-radius:50%;animation:ring-expand 3s ease-out infinite}
+.voice-ring:nth-child(2){animation-delay:.6s}
+.voice-ring:nth-child(3){animation-delay:1.2s}
+@keyframes ring-expand{0%{transform:scale(.3);opacity:.8}100%{transform:scale(1.2);opacity:0}}
+
+/* SOCIAL PROOF */
+.proof{border-top:1px solid var(--border-solid);border-bottom:1px solid var(--border-solid);padding:20px 0}
+.proof-inner{display:flex;justify-content:center;flex-wrap:wrap;gap:12px 40px}
+.proof-item{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:.9rem}
+.proof-item strong{color:var(--teal);font-family:'JetBrains Mono',monospace;font-size:1rem}
+
+/* SECTIONS COMMON */
+section{padding:100px 0}
+.section-label{display:inline-block;font-size:.75rem;text-transform:uppercase;letter-spacing:3px;color:var(--coral);margin-bottom:12px;font-family:'JetBrains Mono',monospace}
+.section-title{font-size:clamp(1.8rem,3.5vw,2.8rem);margin-bottom:16px}
+.section-sub{color:var(--text-muted);max-width:600px;margin-bottom:48px;font-size:1.05rem}
+
+/* FEATURES */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.feature-card{background:var(--bg-card);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:16px;padding:28px;transition:all .3s}
+.feature-card:hover{transform:translateY(-4px);border-color:rgba(125,211,192,0.4);box-shadow:0 8px 40px rgba(125,211,192,0.08)}
+.feature-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:1.5rem}
+.fi-teal{background:rgba(125,211,192,0.12);color:var(--teal)}
+.fi-coral{background:rgba(244,168,150,0.12);color:var(--coral)}
+.feature-card h3{font-size:1.1rem;margin-bottom:8px;font-family:'Playfair Display',serif}
+.feature-card p{color:var(--text-muted);font-size:.9rem;line-height:1.5}
+
+/* SPOTLIGHT */
+.spotlight{background:linear-gradient(180deg,var(--bg) 0%,rgba(26,39,54,0.3) 50%,var(--bg) 100%)}
+.spotlight-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.chat-mock{background:rgba(15,25,35,0.8);border:1px solid var(--border);border-radius:20px;padding:24px;max-width:420px}
+.chat-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border-solid)}
+.chat-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--coral));display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.chat-name{font-weight:600;font-size:.95rem}
+.chat-status{font-size:.75rem;color:var(--teal)}
+.chat-msg{margin-bottom:12px;display:flex}
+.chat-msg.user{justify-content:flex-end}
+.chat-bubble{max-width:80%;padding:12px 16px;border-radius:16px;font-size:.9rem;line-height:1.4}
+.chat-msg.ai .chat-bubble{background:rgba(125,211,192,0.1);border:1px solid var(--border);border-bottom-left-radius:4px}
+.chat-msg.user .chat-bubble{background:rgba(244,168,150,0.15);border:1px solid rgba(244,168,150,0.2);border-bottom-right-radius:4px}
+.spotlight-text h2{font-size:2rem;margin-bottom:16px}
+.spotlight-text p{color:var(--text-muted);margin-bottom:16px;font-size:1rem}
+.spotlight-features{list-style:none;display:flex;flex-direction:column;gap:12px}
+.spotlight-features li{display:flex;align-items:start;gap:10px;color:var(--text-muted);font-size:.95rem}
+.spotlight-features li svg{flex-shrink:0;margin-top:3px;color:var(--teal)}
+
+/* HOW IT WORKS */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;position:relative}
+.steps::before{content:'';position:absolute;top:40px;left:calc(16.66% + 40px);right:calc(16.66% + 40px);height:2px;background:linear-gradient(90deg,var(--teal),var(--coral));opacity:.3}
+.step{text-align:center;position:relative}
+.step-num{width:80px;height:80px;border-radius:50%;background:rgba(125,211,192,0.1);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-family:'JetBrains Mono',monospace;font-size:1.5rem;color:var(--teal);position:relative;z-index:2}
+.step h3{margin-bottom:8px;font-size:1.2rem}
+.step p{color:var(--text-muted);font-size:.9rem;max-width:280px;margin:0 auto}
+
+/* MULTILINGUAL */
+.lang-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.lang-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:24px;text-align:center;transition:all .3s}
+.lang-card:hover{border-color:rgba(125,211,192,0.4);transform:translateY(-2px)}
+.lang-flag{font-size:2.5rem;margin-bottom:12px}
+.lang-card h3{font-size:1.1rem;margin-bottom:8px}
+.lang-card .greeting{font-size:1rem;color:var(--coral);font-style:italic;margin-bottom:4px}
+.lang-card p{color:var(--text-muted);font-size:.85rem}
+
+/* PERSONAS */
+.persona-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
+.persona-card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:all .3s}
+.persona-card:hover{border-color:rgba(244,168,150,0.4);transform:translateY(-2px)}
+.persona-icon{font-size:2rem;margin-bottom:12px}
+.persona-card h3{font-size:1.05rem;margin-bottom:8px;color:var(--coral)}
+.persona-card p{color:var(--text-muted);font-size:.88rem}
+
+/* SHADERS */
+.shader-section{background:linear-gradient(180deg,var(--bg),#0a1219,var(--bg))}
+.shader-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:24px}
+.shader-card{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--border);transition:all .3s;cursor:crosshair}
+.shader-card:hover{border-color:rgba(125,211,192,0.5);box-shadow:0 8px 40px rgba(125,211,192,0.1)}
+.shader-card canvas{display:block;width:100%;height:320px}
+.shader-label{position:absolute;bottom:0;left:0;right:0;padding:16px 20px;background:linear-gradient(transparent,rgba(15,25,35,0.9));display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+.shader-label h3{font-size:1rem;font-family:'Playfair Display',serif}
+.shader-label span{font-size:.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.shader-fullscreen-btn{position:absolute;top:12px;right:12px;background:rgba(15,25,35,0.7);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:.75rem;cursor:pointer;transition:all .2s;font-family:'JetBrains Mono',monospace}
+.shader-fullscreen-btn:hover{background:rgba(125,211,192,0.2);border-color:var(--teal)}
+
+/* CTA */
+.cta-section{position:relative;overflow:hidden}
+.cta-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(125,211,192,0.08),rgba(244,168,150,0.08));z-index:0}
+.cta-content{position:relative;z-index:2;text-align:center;max-width:600px;margin:0 auto}
+.cta-content h2{font-size:clamp(2rem,4vw,3rem);margin-bottom:16px}
+.cta-content p{color:var(--text-muted);margin-bottom:32px;font-size:1.05rem}
+.cta-form{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.cta-input{background:rgba(15,25,35,0.8);border:1px solid var(--border-solid);border-radius:28px;padding:14px 24px;color:var(--text);font-size:1rem;min-width:280px;font-family:inherit;outline:none;transition:border-color .2s}
+.cta-input:focus{border-color:var(--teal)}
+.cta-input::placeholder{color:var(--text-muted)}
+.cta-links{margin-top:24px;display:flex;gap:20px;justify-content:center}
+.cta-links a{color:var(--text-muted);font-size:.9rem;display:flex;align-items:center;gap:6px;transition:color .2s}
+.cta-links a:hover{color:var(--teal)}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border-solid);padding:40px 0}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+.footer-brand{display:flex;align-items:center;gap:10px}
+.footer-brand img{height:28px}
+.footer-brand span{font-family:'Playfair Display',serif;color:var(--teal);font-size:1.1rem}
+.footer-links{display:flex;gap:24px;flex-wrap:wrap}
+.footer-links a{color:var(--text-muted);font-size:.85rem;transition:color .2s}
+.footer-links a:hover{color:var(--teal)}
+.footer-copy{color:var(--text-muted);font-size:.8rem;width:100%;text-align:center;margin-top:16px}
+
+/* ANIMATIONS */
+[data-animate]{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+[data-animate].visible{opacity:1;transform:translateY(0)}
+[data-animate-delay="1"]{transition-delay:.1s}
+[data-animate-delay="2"]{transition-delay:.2s}
+[data-animate-delay="3"]{transition-delay:.3s}
+[data-animate-delay="4"]{transition-delay:.4s}
+
+/* RESPONSIVE */
+@media(max-width:1024px){
+  .spotlight-grid{grid-template-columns:1fr;gap:40px}
+  .chat-mock{max-width:100%}
+  .steps::before{display:none}
+  .hero-visual{display:none}
+}
+@media(max-width:768px){
+  .nav-links{display:none}
+  .hamburger{display:block}
+  .steps{grid-template-columns:1fr;gap:40px}
+  .shader-grid{grid-template-columns:1fr}
+  .hero h1{font-size:2rem}
+  section{padding:60px 0}
+  .proof-inner{gap:8px 24px}
+}
+@media(max-width:480px){
+  .cta-form{flex-direction:column;align-items:center}
+  .cta-input{min-width:100%}
+  .footer-inner{flex-direction:column;text-align:center}
+  .footer-links{justify-content:center}
+}
+
+/* FULLSCREEN SHADER */
+.shader-fullscreen{position:fixed;inset:0;z-index:200;background:var(--bg)}
+.shader-fullscreen canvas{width:100%!important;height:100%!important}
+.shader-fullscreen .shader-close{position:fixed;top:20px;right:20px;background:rgba(15,25,35,0.8);border:1px solid var(--border);border-radius:12px;padding:10px 18px;color:var(--text);font-size:.9rem;cursor:pointer;z-index:201;font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo"><img src="heali-logo.png" alt="Heali"><span>Heali</span></a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#for-who">For Who</a></li>
+      <li><a href="#wallpapers">Wallpapers</a></li>
+      <li><a href="#cta" class="nav-cta">Get Early Access</a></li>
+    </ul>
+    <button class="hamburger" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#features" onclick="this.parentElement.classList.remove('open')">Features</a>
+  <a href="#how-it-works" onclick="this.parentElement.classList.remove('open')">How It Works</a>
+  <a href="#for-who" onclick="this.parentElement.classList.remove('open')">For Who</a>
+  <a href="#wallpapers" onclick="this.parentElement.classList.remove('open')">Wallpapers</a>
+  <a href="#cta" onclick="this.parentElement.classList.remove('open')">Get Early Access</a>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg">
+    <div class="orb orb-teal"></div>
+    <div class="orb orb-coral"></div>
+    <div class="orb orb-small"></div>
+  </div>
+  <div class="hero-visual">
+    <div class="voice-rings">
+      <div class="voice-ring"></div>
+      <div class="voice-ring"></div>
+      <div class="voice-ring"></div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="hero-content" data-animate>
+      <div class="hero-badge"><span class="dot"></span> Launching Soon</div>
+      <h1>Your Health Companion That <span class="grad">Listens, Understands, and Acts</span></h1>
+      <p>Heali is a voice-first AI that manages your medications, tracks your vitals, and keeps your family connected &mdash; in the language you speak.</p>
+      <div class="hero-btns">
+        <a href="#cta" class="btn-primary">Get Early Access</a>
+        <a href="#how-it-works" class="btn-secondary">See How It Works</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<div class="proof">
+  <div class="proof-inner" data-animate>
+    <div class="proof-item"><strong>12+</strong> Features</div>
+    <div class="proof-item"><strong>4</strong> Languages</div>
+    <div class="proof-item"><strong>24/7</strong> Voice Access</div>
+    <div class="proof-item"><strong>FHIR R4</strong> Compliant</div>
+    <div class="proof-item"><strong>Real-time</strong> Emergency Alerts</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-label" data-animate>Features</div>
+    <h2 class="section-title" data-animate>Everything You Need, One Conversation Away</h2>
+    <p class="section-sub" data-animate>From medication reminders to emergency detection, Heali covers every dimension of your health journey.</p>
+    <div class="features-grid">
+
+      <div class="feature-card" data-animate data-animate-delay="1">
+        <div class="feature-icon fi-teal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></div>
+        <h3>Voice Guardian</h3>
+        <p>Talk to your AI health companion naturally. Gemini Live powers real-time voice conversations that understand context and emotion.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="2">
+        <div class="feature-icon fi-coral"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+        <h3>Never Miss a Dose</h3>
+        <p>Smart medication reminders via push notifications and Twilio voice calls. Press 1 when taken, 2 to snooze. Tracks adherence over time.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="3">
+        <div class="feature-icon fi-teal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/></svg></div>
+        <h3>Speak Your Language</h3>
+        <p>Fluent in English, Hindi, Kannada, and Spanish. Each language comes with a unique companion persona and voice.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="1">
+        <div class="feature-icon fi-coral"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>Smart Health Dashboard</h3>
+        <p>Track blood pressure, heart rate, glucose, SpO2, and weight. See 7-day trends, risk scores, and daily health digests at a glance.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="2">
+        <div class="feature-icon fi-teal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 11h.01M11 15h.01M16 16a5 5 0 0 0-8 0"/><circle cx="12" cy="12" r="10"/></svg></div>
+        <h3>Pill Verification</h3>
+        <p>Point your camera at any pill. Heali identifies it and verifies it against your prescription using AI vision. No more guessing.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="3">
+        <div class="feature-icon fi-coral"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M5 8H4a4 4 0 0 0 0 8h1"/><line x1="6" y1="12" x2="18" y2="12"/></svg></div>
+        <h3>Food & Nutrition</h3>
+        <p>Snap a photo of your meal. Heali instantly breaks down calories, protein, carbs, and fat. Track your daily nutrition targets.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="1">
+        <div class="feature-icon fi-teal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg></div>
+        <h3>Prescription Scanner</h3>
+        <p>Scan prescriptions and lab reports with your camera. Heali extracts medications, dosages, test results, and flags drug interactions.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="2">
+        <div class="feature-icon fi-coral"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>Family Care Network</h3>
+        <p>Link family members with a simple code. Caregivers see adherence scores, vital trends, and receive RED/AMBER/GREEN safety alerts.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="3">
+        <div class="feature-icon fi-teal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/></svg></div>
+        <h3>Book a Doctor</h3>
+        <p>Find nearby hospitals by specialty and distance. Book appointments with voice commands. Auto-generates clinical briefs for your doctor.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="1">
+        <div class="feature-icon fi-coral"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>
+        <h3>Exercise & Wellness</h3>
+        <p>Guided breathing, stretching, and cool-down sessions with real-time posture coaching via your camera. Your personal wellness coach.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="2">
+        <div class="feature-icon fi-teal"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg></div>
+        <h3>Live Medical Interpreter</h3>
+        <p>Real-time voice translation between you and your doctor. Speak Hindi, hear English. Maintains exact medical terminology.</p>
+      </div>
+
+      <div class="feature-card" data-animate data-animate-delay="3">
+        <div class="feature-icon fi-coral"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <h3>Emergency Detection</h3>
+        <p>Automatic detection of critical symptoms like chest pain or severe bleeding. Instantly alerts your family and activates emergency protocol.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- VOICE GUARDIAN SPOTLIGHT -->
+<section class="spotlight" id="voice-guardian">
+  <div class="container">
+    <div class="spotlight-grid">
+      <div class="chat-mock" data-animate>
+        <div class="chat-header">
+          <div class="chat-avatar">H</div>
+          <div><div class="chat-name">Heali</div><div class="chat-status">&#9679; Online</div></div>
+        </div>
+        <div class="chat-msg ai"><div class="chat-bubble">Good morning! I see it's time for your Metformin. Have you taken it yet?</div></div>
+        <div class="chat-msg user"><div class="chat-bubble">Yes, just took it with breakfast.</div></div>
+        <div class="chat-msg ai"><div class="chat-bubble">Great! I've logged your Metformin 500mg as taken at 8:15 AM. Your blood sugar was 142 this morning &mdash; let's keep an eye on it. Want me to remind you to check again before lunch?</div></div>
+        <div class="chat-msg user"><div class="chat-bubble">Yes please. Also, can you scan this new prescription?</div></div>
+        <div class="chat-msg ai"><div class="chat-bubble">Of course! Turn on your camera and hold the prescription steady. I'll extract the medications and check for any drug interactions.</div></div>
+      </div>
+      <div class="spotlight-text" data-animate>
+        <div class="section-label">Core Experience</div>
+        <h2>Meet Your Voice Guardian</h2>
+        <p>More than a chatbot. Heali's Voice Guardian is a real-time AI companion that listens, remembers, and takes action on your behalf.</p>
+        <ul class="spotlight-features">
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Real-time voice conversations powered by Gemini Live</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Logs medications, vitals, and meals through natural speech</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Camera-powered pill verification and food analysis</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Automatic emergency detection with family alerts</li>
+          <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>4 companion personas with distinct voices and personalities</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="section-label" data-animate>How It Works</div>
+    <h2 class="section-title" data-animate>Three Steps to Better Health</h2>
+    <p class="section-sub" data-animate>No complex setup. No learning curve. Just talk.</p>
+    <div class="steps">
+      <div class="step" data-animate data-animate-delay="1">
+        <div class="step-num">1</div>
+        <h3>Speak</h3>
+        <p>Talk to Heali in your language. Tell it about your medications, how you're feeling, or what you ate today.</p>
+      </div>
+      <div class="step" data-animate data-animate-delay="2">
+        <div class="step-num">2</div>
+        <h3>Track</h3>
+        <p>Heali automatically logs medications, vitals, meals, and symptoms. See trends and adherence scores on your dashboard.</p>
+      </div>
+      <div class="step" data-animate data-animate-delay="3">
+        <div class="step-num">3</div>
+        <h3>Protect</h3>
+        <p>Get emergency alerts, family notifications, clinical briefs for your doctor, and drug interaction warnings &mdash; automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MULTILINGUAL -->
+<section id="languages">
+  <div class="container">
+    <div class="section-label" data-animate>Multilingual</div>
+    <h2 class="section-title" data-animate>Health Care In Your Language</h2>
+    <p class="section-sub" data-animate>Each language comes with a unique companion persona, voice, and cultural understanding.</p>
+    <div class="lang-grid">
+      <div class="lang-card" data-animate data-animate-delay="1">
+        <div class="lang-flag">&#127468;&#127463;</div>
+        <h3>English</h3>
+        <div class="greeting">"Hi there! How are you feeling today?"</div>
+        <p>Balanced and informative companion</p>
+      </div>
+      <div class="lang-card" data-animate data-animate-delay="2">
+        <div class="lang-flag">&#127470;&#127475;</div>
+        <h3>Hindi</h3>
+        <div class="greeting">"Namaste! Aaj aap kaisi hain?"</div>
+        <p>Warm and culturally attuned persona</p>
+      </div>
+      <div class="lang-card" data-animate data-animate-delay="3">
+        <div class="lang-flag">&#127470;&#127475;</div>
+        <h3>Kannada</h3>
+        <div class="greeting">"Namaskara! Ivattu hEgiddIra?"</div>
+        <p>Gentle and respectful companion</p>
+      </div>
+      <div class="lang-card" data-animate data-animate-delay="4">
+        <div class="lang-flag">&#127466;&#127480;</div>
+        <h3>Spanish</h3>
+        <div class="greeting">"Hola! Como te sientes hoy?"</div>
+        <p>Energetic and supportive persona</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TARGET USERS -->
+<section id="for-who">
+  <div class="container">
+    <div class="section-label" data-animate>Built For</div>
+    <h2 class="section-title" data-animate>Real People, Real Lives</h2>
+    <p class="section-sub" data-animate>Heali adapts to whoever needs it most.</p>
+    <div class="persona-grid">
+      <div class="persona-card" data-animate data-animate-delay="1">
+        <div class="persona-icon">&#128138;</div>
+        <h3>Managing Chronic Conditions</h3>
+        <p>Diabetes, hypertension, heart disease &mdash; track medications, glucose, blood pressure, and get adherence insights that keep you on course.</p>
+      </div>
+      <div class="persona-card" data-animate data-animate-delay="2">
+        <div class="persona-icon">&#128106;</div>
+        <h3>Caring From Afar</h3>
+        <p>Monitor your parent's medication adherence, vital trends, and safety alerts from anywhere. Get notified the moment something needs attention.</p>
+      </div>
+      <div class="persona-card" data-animate data-animate-delay="3">
+        <div class="persona-icon">&#127759;</div>
+        <h3>Speaking My Language</h3>
+        <p>Non-English speakers deserve quality health management too. Heali converses fluently in Hindi, Kannada, and Spanish with cultural sensitivity.</p>
+      </div>
+      <div class="persona-card" data-animate data-animate-delay="4">
+        <div class="persona-icon">&#129491;</div>
+        <h3>Aging With Dignity</h3>
+        <p>Gentle voice, extended pauses, large touch targets, and posture coaching. Designed for older adults who want independence with a safety net.</p>
+      </div>
+      <div class="persona-card" data-animate data-animate-delay="1">
+        <div class="persona-icon">&#129657;</div>
+        <h3>Doctor's Companion</h3>
+        <p>Get FHIR R4 clinical briefs with adherence data, vitals trends, risk scores, and safety alerts &mdash; before your patient walks in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SHADER WALLPAPERS -->
+<section class="shader-section" id="wallpapers">
+  <div class="container">
+    <div class="section-label" data-animate>Interactive Art</div>
+    <h2 class="section-title" data-animate>Interactive Shader Wallpapers</h2>
+    <p class="section-sub" data-animate>Move your mouse and click to interact. Futuristic visuals that respond to you.</p>
+    <div class="shader-grid">
+      <div class="shader-card" data-animate data-animate-delay="1">
+        <canvas id="shader1"></canvas>
+        <div class="shader-label"><h3>Neural Pulse</h3><span>move &amp; click</span></div>
+        <button class="shader-fullscreen-btn" onclick="toggleFullscreen('shader1')">&#x26F6; Fullscreen</button>
+      </div>
+      <div class="shader-card" data-animate data-animate-delay="2">
+        <canvas id="shader2"></canvas>
+        <div class="shader-label"><h3>Aurora Flow</h3><span>move &amp; click</span></div>
+        <button class="shader-fullscreen-btn" onclick="toggleFullscreen('shader2')">&#x26F6; Fullscreen</button>
+      </div>
+      <div class="shader-card" data-animate data-animate-delay="3">
+        <canvas id="shader3"></canvas>
+        <div class="shader-label"><h3>Plasma Grid</h3><span>move &amp; click</span></div>
+        <button class="shader-fullscreen-btn" onclick="toggleFullscreen('shader3')">&#x26F6; Fullscreen</button>
+      </div>
+      <div class="shader-card" data-animate data-animate-delay="1">
+        <canvas id="shader4"></canvas>
+        <div class="shader-label"><h3>Particle Nebula</h3><span>move &amp; click</span></div>
+        <button class="shader-fullscreen-btn" onclick="toggleFullscreen('shader4')">&#x26F6; Fullscreen</button>
+      </div>
+      <div class="shader-card" data-animate data-animate-delay="2">
+        <canvas id="shader5"></canvas>
+        <div class="shader-label"><h3>Digital Rain</h3><span>move &amp; click</span></div>
+        <button class="shader-fullscreen-btn" onclick="toggleFullscreen('shader5')">&#x26F6; Fullscreen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="cta">
+  <div class="cta-bg"></div>
+  <div class="container">
+    <div class="cta-content" data-animate>
+      <h2>Your Health Deserves a <span class="grad">Best Friend</span></h2>
+      <p>Join the waitlist and be among the first to experience voice-first health management.</p>
+      <div class="cta-form">
+        <input class="cta-input" type="email" placeholder="Enter your email address">
+        <button class="btn-primary" onclick="alert('Thanks for your interest! We\'ll be in touch.')">Get Early Access</button>
+      </div>
+      <div class="cta-links">
+        <a href="https://github.com/Abi5678/Heali_HSIL_V2" target="_blank"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg> View on GitHub</a>
+        <a href="#">Privacy Policy</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><img src="heali-logo.png" alt="Heali"><span>Heali</span></div>
+      <div class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#for-who">For Who</a>
+        <a href="#wallpapers">Wallpapers</a>
+        <a href="https://github.com/Abi5678/Heali_HSIL_V2" target="_blank">GitHub</a>
+      </div>
+      <div class="footer-copy">&copy; 2026 Heali &mdash; Your AI Health Bestie. Built with care.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll animations
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('[data-animate]').forEach(el => obs.observe(el));
+
+// Nav scroll effect
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+});
+
+// ===================== SHADER WALLPAPERS =====================
+
+// Utility: create WebGL shader program
+function createShaderProgram(gl, vsrc, fsrc) {
+  const vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, vsrc); gl.compileShader(vs);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, fsrc); gl.compileShader(fs);
+  const p = gl.createProgram();
+  gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+  return p;
+}
+
+const vertexShader = `attribute vec2 pos;void main(){gl_Position=vec4(pos,0.,1.);}`;
+
+function setupGL(canvasId) {
+  const c = document.getElementById(canvasId);
+  const gl = c.getContext('webgl');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  function resize() {
+    c.width = c.clientWidth * dpr;
+    c.height = c.clientHeight * dpr;
+    gl.viewport(0, 0, c.width, c.height);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+  return { canvas: c, gl, dpr, resize };
+}
+
+function runShader(canvasId, fragSrc) {
+  const { canvas: c, gl, dpr } = setupGL(canvasId);
+  const prog = createShaderProgram(gl, vertexShader, fragSrc);
+  gl.useProgram(prog);
+  const posLoc = gl.getAttribLocation(prog, 'pos');
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+  const uClick = gl.getUniformLocation(prog, 'u_click');
+  let mx = 0.5, my = 0.5, clickTime = -10.0;
+  c.addEventListener('mousemove', e => {
+    const r = c.getBoundingClientRect();
+    mx = (e.clientX - r.left) / r.width;
+    my = 1.0 - (e.clientY - r.top) / r.height;
+  });
+  c.addEventListener('click', () => { clickTime = performance.now() / 1000; });
+  c.addEventListener('touchmove', e => {
+    const r = c.getBoundingClientRect();
+    mx = (e.touches[0].clientX - r.left) / r.width;
+    my = 1.0 - (e.touches[0].clientY - r.top) / r.height;
+    e.preventDefault();
+  }, { passive: false });
+  c.addEventListener('touchstart', () => { clickTime = performance.now() / 1000; });
+  function frame() {
+    const t = performance.now() / 1000;
+    gl.uniform2f(uRes, c.width, c.height);
+    gl.uniform1f(uTime, t);
+    gl.uniform2f(uMouse, mx, my);
+    gl.uniform1f(uClick, t - clickTime);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+// SHADER 1: Neural Pulse
+runShader('shader1', `
+precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_mouse;
+uniform float u_click;
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*u_resolution)/min(u_resolution.x,u_resolution.y);
+  vec2 m=u_mouse-.5;
+  float d=length(uv-m);
+  float pulse=sin(d*20.-u_time*3.)*.5+.5;
+  pulse*=exp(-d*3.);
+  float click_wave=exp(-u_click*2.)*sin(d*30.-u_click*15.)*.5;
+  click_wave*=exp(-d*2.);
+  float n=0.;
+  for(int i=0;i<5;i++){
+    float fi=float(i);
+    vec2 p=vec2(sin(u_time*.3+fi*1.3)*.6,cos(u_time*.4+fi*1.7)*.4);
+    float nd=length(uv-p);
+    n+=.015/nd;
+  }
+  float net=0.;
+  for(int i=0;i<8;i++){
+    float fi=float(i);
+    vec2 p1=vec2(sin(u_time*.2+fi)*.7,cos(u_time*.3+fi*1.2)*.5);
+    vec2 p2=vec2(sin(u_time*.25+fi+2.)*.7,cos(u_time*.35+fi*1.5+1.)*.5);
+    vec2 ab=p2-p1;float t2=clamp(dot(uv-p1,ab)/dot(ab,ab),0.,1.);
+    float ld=length(uv-p1-ab*t2);
+    net+=.003/(ld+.01);
+  }
+  vec3 col=vec3(.06,.1,.14);
+  col+=vec3(.49,.83,.75)*pulse*.6;
+  col+=vec3(.49,.83,.75)*n*.3;
+  col+=vec3(.3,.6,.5)*net*.15;
+  col+=vec3(.49,.83,.75)*click_wave;
+  col+=vec3(.96,.66,.59)*max(0.,click_wave)*.5;
+  gl_FragColor=vec4(col,1.);
+}`);
+
+// SHADER 2: Aurora Flow
+runShader('shader2', `
+precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_mouse;
+uniform float u_click;
+void main(){
+  vec2 uv=gl_FragCoord.xy/u_resolution;
+  vec2 m=u_mouse;
+  float wave=0.;
+  for(int i=0;i<6;i++){
+    float fi=float(i);
+    float freq=1.5+fi*.8;
+    float amp=.08/(1.+fi*.3);
+    float phase=u_time*(.3+fi*.1)+m.x*3.;
+    wave+=sin(uv.x*freq*6.28+phase+sin(uv.y*3.+u_time*.5)*2.)*amp;
+  }
+  float y=uv.y+wave;
+  float band1=exp(-pow((y-.3)*4.,2.));
+  float band2=exp(-pow((y-.5)*5.,2.));
+  float band3=exp(-pow((y-.7)*4.,2.));
+  float click_ripple=exp(-u_click*3.)*sin(length(uv-m)*25.-u_click*10.)*.3;
+  click_ripple*=exp(-length(uv-m)*3.);
+  vec3 c1=vec3(.2,.9,.7);
+  vec3 c2=vec3(.4,.5,.95);
+  vec3 c3=vec3(.95,.6,.55);
+  vec3 col=vec3(.04,.06,.1);
+  col+=c1*band1*.7;
+  col+=c2*band2*.5;
+  col+=c3*band3*.4;
+  col+=vec3(.5,.8,.7)*abs(click_ripple);
+  float shimmer=sin(uv.x*40.+u_time*2.+uv.y*20.)*.5+.5;
+  col+=vec3(.3,.5,.4)*shimmer*.05*(band1+band2);
+  gl_FragColor=vec4(col,1.);
+}`);
+
+// SHADER 3: Plasma Grid
+runShader('shader3', `
+precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform vec2 u_mouse;
+uniform float u_click;
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*u_resolution)/min(u_resolution.x,u_resolution.y);
+  vec2 m=u_mouse-.5;
+  float dist_m=length(uv-m);
+  float distort=.15*exp(-dist_m*3.);
+  uv+=normalize(uv-m+.001)*distort;
+  vec2 grid=fract(uv*8.)-.5;
+  float g=min(abs(grid.x),abs(grid.y));
+  float line=smoothstep(.02,.0,g);
+  float plasma=sin(uv.x*10.+u_time*2.)+sin(uv.y*8.-u_time*1.5);
+  plasma+=sin(length(uv)*12.-u_time*3.);
+  plasma+=sin((uv.x+uv.y)*6.+u_time);
+  plasma*=.25;
+  float flash=exp(-u_click*4.)*.8;
+  vec3 col=vec3(.05,.08,.12);
+  vec3 gridCol=mix(vec3(.2,.5,.45),vec3(.5,.3,.55),plasma+.5);
+  col+=gridCol*line*.6;
+  col+=vec3(.4,.8,.7)*exp(-dist_m*4.)*.3;
+  float glow=.008/(g+.01)*exp(-length(uv)*1.5);
+  col+=vec3(.3,.6,.5)*glow*.3;
+  col+=vec3(.9,.8,.7)*flash*exp(-dist_m*2.);
+  gl_FragColor=vec4(col,1.);
+}`);
+
+// SHADER 5: Digital Rain (Canvas 2D for character rendering)
+(function(){
+  const c = document.getElementById('shader5');
+  const ctx = c.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let mx = 0.5, my = 0.5, clickTime = -10;
+  c.addEventListener('mousemove', e => {
+    const r = c.getBoundingClientRect();
+    mx = (e.clientX - r.left) / r.width;
+    my = (e.clientY - r.top) / r.height;
+  });
+  c.addEventListener('click', () => { clickTime = performance.now() / 1000; });
+  c.addEventListener('touchmove', e => {
+    const r = c.getBoundingClientRect();
+    mx = (e.touches[0].clientX - r.left) / r.width;
+    my = (e.touches[0].clientY - r.top) / r.height;
+    e.preventDefault();
+  }, { passive: false });
+  c.addEventListener('touchstart', () => { clickTime = performance.now() / 1000; });
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*()ヲアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン';
+  let cols, drops;
+  const fontSize = 14;
+  function initRain() {
+    c.width = c.clientWidth * dpr;
+    c.height = c.clientHeight * dpr;
+    cols = Math.floor(c.width / (fontSize));
+    drops = new Array(cols).fill(0).map(() => Math.random() * -50);
+  }
+  initRain();
+  window.addEventListener('resize', initRain);
+  function frame() {
+    const t = performance.now() / 1000;
+    ctx.fillStyle = 'rgba(15,25,35,0.08)';
+    ctx.fillRect(0, 0, c.width, c.height);
+    const clickAge = t - clickTime;
+    const speedMult = 1 + Math.exp(-clickAge * 3) * 4;
+    for (let i = 0; i < cols; i++) {
+      const colX = i * fontSize;
+      const normX = i / cols;
+      const bend = (mx - normX) * 40 * Math.exp(-Math.abs(mx - normX) * 8);
+      const x = colX + bend;
+      const brightness = 0.3 + 0.7 * Math.exp(-Math.abs(normX - mx) * 4);
+      const r2 = Math.floor(100 * brightness);
+      const g2 = Math.floor(210 * brightness);
+      const b2 = Math.floor(190 * brightness);
+      ctx.fillStyle = `rgb(${r2},${g2},${b2})`;
+      ctx.font = `${fontSize}px 'JetBrains Mono', monospace`;
+      const ch = chars[Math.floor(Math.random() * chars.length)];
+      const y = drops[i] * fontSize;
+      ctx.fillText(ch, x, y);
+      ctx.fillStyle = `rgba(125,211,192,0.6)`;
+      ctx.fillText(ch, x, y);
+      drops[i] += (0.5 + Math.random() * 0.5) * speedMult;
+      if (drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+// SHADER 4: Particle Nebula (Canvas 2D for particles)
+(function(){
+  const c = document.getElementById('shader4');
+  const ctx = c.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let mx = 0.5, my = 0.5, clickTime = -10, clicked = false;
+  c.addEventListener('mousemove', e => {
+    const r = c.getBoundingClientRect();
+    mx = (e.clientX - r.left) / r.width;
+    my = (e.clientY - r.top) / r.height;
+  });
+  c.addEventListener('click', () => { clickTime = performance.now() / 1000; clicked = true; });
+  c.addEventListener('touchmove', e => {
+    const r = c.getBoundingClientRect();
+    mx = (e.touches[0].clientX - r.left) / r.width;
+    my = (e.touches[0].clientY - r.top) / r.height;
+    e.preventDefault();
+  }, { passive: false });
+  c.addEventListener('touchstart', () => { clickTime = performance.now() / 1000; clicked = true; });
+  const N = 600;
+  let particles = [];
+  function initParticles() {
+    c.width = c.clientWidth * dpr;
+    c.height = c.clientHeight * dpr;
+    particles = [];
+    for (let i = 0; i < N; i++) {
+      particles.push({
+        x: Math.random(), y: Math.random(),
+        vx: (Math.random() - 0.5) * 0.001, vy: (Math.random() - 0.5) * 0.001,
+        size: 1 + Math.random() * 2,
+        hue: Math.random() < 0.6 ? 160 + Math.random() * 20 : 15 + Math.random() * 15,
+        alpha: 0.3 + Math.random() * 0.7
+      });
+    }
+  }
+  initParticles();
+  window.addEventListener('resize', initParticles);
+  function frame() {
+    const t = performance.now() / 1000;
+    ctx.fillStyle = 'rgba(15,25,35,0.12)';
+    ctx.fillRect(0, 0, c.width, c.height);
+    const clickAge = t - clickTime;
+    const explode = Math.exp(-clickAge * 3);
+    for (let i = 0; i < N; i++) {
+      const p = particles[i];
+      const dx = mx - p.x, dy = my - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 0.001;
+      const force = 0.0003 / (dist * dist + 0.01);
+      p.vx += dx * force;
+      p.vy += dy * force;
+      if (explode > 0.1) {
+        p.vx -= dx * explode * 0.02;
+        p.vy -= dy * explode * 0.02;
+      }
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) { p.x = 0; p.vx *= -0.5; }
+      if (p.x > 1) { p.x = 1; p.vx *= -0.5; }
+      if (p.y < 0) { p.y = 0; p.vy *= -0.5; }
+      if (p.y > 1) { p.y = 1; p.vy *= -0.5; }
+      const sx = p.x * c.width, sy = p.y * c.height;
+      const s = p.size * dpr * (1 + explode * 2);
+      const bright = Math.min(1, p.alpha + explode * 0.5);
+      ctx.beginPath();
+      ctx.arc(sx, sy, s, 0, Math.PI * 2);
+      if (p.hue > 100) {
+        ctx.fillStyle = `rgba(125,211,192,${bright * 0.8})`;
+      } else {
+        ctx.fillStyle = `rgba(244,168,150,${bright * 0.8})`;
+      }
+      ctx.fill();
+    }
+    for (let i = 0; i < N; i += 3) {
+      const p1 = particles[i];
+      for (let j = i + 1; j < Math.min(i + 8, N); j++) {
+        const p2 = particles[j];
+        const d = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+        if (d < 0.08) {
+          ctx.strokeStyle = `rgba(125,211,192,${(1 - d / 0.08) * 0.15})`;
+          ctx.lineWidth = 0.5 * dpr;
+          ctx.beginPath();
+          ctx.moveTo(p1.x * c.width, p1.y * c.height);
+          ctx.lineTo(p2.x * c.width, p2.y * c.height);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+
+// Fullscreen toggle
+function toggleFullscreen(id) {
+  const canvas = document.getElementById(id);
+  const card = canvas.parentElement;
+  if (card.classList.contains('shader-fullscreen')) {
+    card.classList.remove('shader-fullscreen');
+    const closeBtn = card.querySelector('.shader-close');
+    if (closeBtn) closeBtn.remove();
+  } else {
+    card.classList.add('shader-fullscreen');
+    const btn = document.createElement('button');
+    btn.className = 'shader-close';
+    btn.textContent = '✕ Close';
+    btn.onclick = () => toggleFullscreen(id);
+    card.appendChild(btn);
+  }
+  setTimeout(() => {
+    canvas.width = canvas.clientWidth * (Math.min(window.devicePixelRatio || 1, 2));
+    canvas.height = canvas.clientHeight * (Math.min(window.devicePixelRatio || 1, 2));
+    const gl = canvas.getContext('webgl');
+    if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+  }, 50);
+}
+</script>
+</body>
+</html>
